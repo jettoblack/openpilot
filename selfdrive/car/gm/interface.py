@@ -89,7 +89,7 @@ class CarInterface(CarInterfaceBase):
     ret.pcmCruise = False  # stock cruise control is kept off
     ret.stoppingControl = True
     ret.startAccel = 0.8
-    ret.steerLimitTimer = 0.4
+    ret.steerLimitTimer = 0.4 # warn immediately on saturated steering
     ret.radarTimeStep = 1/15  # GM radar runs at 15Hz instead of standard 20Hz
 
     # GM port is a community feature
@@ -134,7 +134,7 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.torque.kp = 2.0 / max_torque
       ret.lateralTuning.torque.kf = 1.0 / max_torque
       ret.lateralTuning.torque.ki = 0.5 / max_torque
-      ret.lateralTuning.torque.friction = 0.08
+      ret.lateralTuning.torque.friction = 0.01
       ret.steerActuatorDelay = 0.18
 
       # Only tuned to reduce oscillations. TODO.
@@ -229,7 +229,6 @@ class CarInterface(CarInterfaceBase):
     # TODO: start from empirically derived lateral slip stiffness for the civic and scale by
     # mass and CG position, so all cars will have approximately similar dyn behaviors
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront, tire_stiffness_factor=tire_stiffness_factor)
-    
     return ret
 
   # returns a car.CarState
@@ -407,9 +406,7 @@ class CarInterface(CarInterfaceBase):
 
     ret.events = events.to_msg()
 
-    # copy back carState packet to CS
     self.CS.out = ret.as_reader()
-
     return self.CS.out
 
   def apply(self, c):

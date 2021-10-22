@@ -1,6 +1,7 @@
 import numpy as np
 from numbers import Number
 from collections import deque
+from common.op_params import opParams
 from common.numpy_fast import clip, interp
 
 
@@ -13,13 +14,13 @@ def apply_deadzone(error, deadzone):
     error = 0.
   return error
 
-
 class PIDController:
   def __init__(self, k_p=0., k_i=0., k_d=0., k_f=1., k_11=0., k_12=0., k_13=0., k_period=1., pos_limit=None, neg_limit=None, rate=100, sat_limit=0.8, derivative_period=1.):
+    self.op_params = opParams()
     self._k_p = k_p  # proportional gain
     self._k_i = k_i  # integral gain
     self._k_d = k_d  # derivative gain
-    self.k_f = k_f   # feedforward gain
+    self._k_f = k_f   # feedforward gain
     if isinstance(self._k_p, Number):
       self._k_p = [[0], [self._k_p]]
     if isinstance(self._k_i, Number):
@@ -71,6 +72,10 @@ class PIDController:
   @property
   def k_d(self):
     return interp(self.speed, self._k_d[0], self._k_d[1])
+
+  @property
+  def k_f(self):
+    return self._k_f
   
   @property
   def k_11(self):
@@ -157,3 +162,16 @@ class PIDController:
 
     self.control = clip(control, self.neg_limit, self.pos_limit)
     return self.control
+
+class LiveTorquePIDController(PIDController):
+  @property
+  def k_p(self):
+    return 2. / self.op_params.get('MAX_LAT_ACCEL')
+
+  @property
+  def k_i(self):
+    return 0.5 / self.op_params.get('MAX_LAT_ACCEL')
+
+  @property
+  def k_f(self):
+    return 1.0 / self.op_params.get('MAX_LAT_ACCEL')

@@ -1,9 +1,10 @@
 import math
-from selfdrive.controls.lib.pid import PIDController
+from selfdrive.controls.lib.pid import LiveTorquePIDController
 from common.numpy_fast import interp
 from selfdrive.controls.lib.latcontrol import LatControl, MIN_STEER_SPEED
 from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
 from cereal import log
+from common.op_params import opParams
 
 # At higher speeds (25+mph) we can assume:
 # Lateral acceleration achieved by a specific car correlates to
@@ -24,14 +25,19 @@ JERK_THRESHOLD = 0.2
 class LatControlTorque(LatControl):
   def __init__(self, CP, CI):
     super().__init__(CP, CI)
-    self.pid = PIDController(CP.lateralTuning.torque.kp, CP.lateralTuning.torque.ki,
+    self.pid = LiveTorquePIDController(CP.lateralTuning.torque.kp, CP.lateralTuning.torque.ki,
                             k_f=CP.lateralTuning.torque.kf, pos_limit=1.0, neg_limit=-1.0)
     self.get_steer_feedforward = CI.get_steer_feedforward_function()
     self.steer_max = 1.0
     self.pid.pos_limit = self.steer_max
     self.pid.neg_limit = -self.steer_max
     self.use_steering_angle = CP.lateralTuning.torque.useSteeringAngle
-    self.friction = CP.lateralTuning.torque.friction
+    self._friction = CP.lateralTuning.torque.friction
+    self.op_params = opParams()
+
+  @property
+  def friction(self):
+    return self.op_params.get('FRICTION')
 
   def reset(self):
     super().reset()
