@@ -105,9 +105,9 @@ def initialize_v_cruise(v_ego, buttonEvents, v_cruise_last):
   return int(round(clip(v_ego * CV.MS_TO_KPH, V_CRUISE_ENABLE_MIN, V_CRUISE_MAX)))
 
 
-def get_lag_adjusted_curvature(CP, v_ego, psis, curvatures, curvature_rates, t_since_plan):
+def get_lag_adjusted_curvature(CP, v_ego, psis, curvatures, curvature_rates, t_since_plan, delay_in = -1.):
   # TODO this needs more thought, use .2s extra for now to estimate other delays
-  delay = CP.steerActuatorDelay + .2
+  delay = (CP.steerActuatorDelay if delay_in < 0. else delay_in) + .2
   if len(psis) == CONTROL_N:
     psi = interp(delay + t_since_plan, T_IDXS[:CONTROL_N], psis)
     psi -= interp(t_since_plan, T_IDXS[:CONTROL_N], psis)

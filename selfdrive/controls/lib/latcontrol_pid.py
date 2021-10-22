@@ -1,6 +1,6 @@
 import math
 
-from selfdrive.controls.lib.pid import PIDController
+from selfdrive.controls.lib.pid import LatPIDController
 from selfdrive.controls.lib.drive_helpers import get_steer_max
 from selfdrive.config import Conversions as CV
 from cereal import log
@@ -8,7 +8,7 @@ from cereal import log
 
 class LatControlPID():
   def __init__(self, CP, CI):
-    self.pid = PIDController((CP.lateralTuning.pid.kpBP, CP.lateralTuning.pid.kpV),
+    self.pid = LatPIDController((CP.lateralTuning.pid.kpBP, CP.lateralTuning.pid.kpV),
                              (CP.lateralTuning.pid.kiBP, CP.lateralTuning.pid.kiV),
                              (CP.lateralTuning.pid.kdBP, CP.lateralTuning.pid.kdV),
                              k_11 = 0.5, k_12 = 1., k_13 = 2., k_period=0.1,

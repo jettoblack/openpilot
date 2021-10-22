@@ -1,5 +1,6 @@
 import numpy as np
 from numbers import Number
+from common.op_params import opParams
 
 from common.numpy_fast import clip, interp
 
@@ -13,13 +14,13 @@ def apply_deadzone(error, deadzone):
     error = 0.
   return error
 
-
 class PIDController:
   def __init__(self, k_p=0., k_i=0., k_d=0., k_f=1., k_11=0., k_12=0., k_13=0., k_period=1., pos_limit=None, neg_limit=None, rate=100, sat_limit=0.8, derivative_period=1.):
+    self.op_params = opParams()
     self._k_p = k_p  # proportional gain
     self._k_i = k_i  # integral gain
     self._k_d = k_d  # derivative gain
-    self.k_f = k_f   # feedforward gain
+    self._k_f = k_f   # feedforward gain
     if isinstance(self._k_p, Number):
       self._k_p = [[0], [self._k_p]]
     if isinstance(self._k_i, Number):
@@ -62,6 +63,10 @@ class PIDController:
   @property
   def k_d(self):
     return interp(self.speed, self._k_d[0], self._k_d[1])
+
+  @property
+  def k_f(self):
+    return self._k_f
   
   @property
   def k_11(self):
@@ -152,3 +157,36 @@ class PIDController:
 
     self.control = clip(control, self.neg_limit, self.pos_limit)
     return self.control
+
+class LatPIDController(PIDController):
+  @property
+  def k_p(self):
+    override = self.op_params.get('LAT_P_OVERRIDE')
+    if override:
+      return override
+    else:
+      return interp(self.speed, self._k_p[0], (0, self.op_params.get('LAT_P')))
+
+  @property
+  def k_i(self):
+    return self.op_params.get('LAT_I')
+
+  @property
+  def k_d(self):
+    return self.op_params.get('LAT_D')
+
+  @property
+  def k_f(self):
+    return self.op_params.get('LAT_F')
+
+  @property
+  def k_11(self):
+    return self.op_params.get('LAT_11')
+
+  @property
+  def k_12(self):
+    return self.op_params.get('LAT_12')
+
+  @property
+  def k_13(self):
+    return self.op_params.get('LAT_13')
