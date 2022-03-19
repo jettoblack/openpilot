@@ -26,7 +26,8 @@ class LatControlPID():
 
     angle_steers_des_no_offset = math.degrees(VM.get_steer_from_curvature(-desired_curvature, CS.vEgo, params.roll))
     angle_steers_des = angle_steers_des_no_offset + params.angleOffsetDeg
-
+    
+    pid_log.steeringAngleDesiredDeg = angle_steers_des
     pid_log.angleError = angle_steers_des - CS.steeringAngleDeg
     if CS.vEgo < 0.3 or not active:
       output_steer = 0.0
@@ -57,6 +58,7 @@ class LatControlPID():
       pid_log.p = self.pid.p
       pid_log.i = self.pid.i
       pid_log.f = self.pid.f
+      pid_log.d = self.pid.d
       pid_log.output = output_steer
       pid_log.saturated = bool(self.pid.saturated)
 

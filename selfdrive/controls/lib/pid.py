@@ -96,6 +96,7 @@ class PIDController:
     self.p = 0.0
     self.i = 0.0
     self.f = 0.0
+    self.d = 0.0
     self.sat_count = 0.0
     self.saturated = False
     self.control = 0
@@ -127,10 +128,10 @@ class PIDController:
         kd *= 1. + min(2., self.k_13 * abs_guf)
     
     if len(self.errors) >= self._d_period and kd > 0.:  # makes sure we have enough history for period
-      d = (error - self.errors[-self._d_period]) * self._d_period_recip  # get deriv in terms of 100hz (tune scale doesn't change)
-      d *= kd
+      self.d = (error - self.errors[-self._d_period]) * self._d_period_recip  # get deriv in terms of 100hz (tune scale doesn't change)
+      self.d *= kd
     else:
-      d = 0.
+      self.d = 0.
     
     self.p = error * kp
     self.f = feedforward * self.k_f
@@ -139,7 +140,7 @@ class PIDController:
       self.i -= self.i_unwind_rate * float(np.sign(self.i))
     else:
       i = self.i + error * ki * self.i_rate
-      control = self.p + self.f + i + d
+      control = self.p + self.f + i + self.d
 
       # Update when changing i will move the control away from the limits
       # or when i will move towards the sign of the error
@@ -148,7 +149,7 @@ class PIDController:
          not freeze_integrator:
         self.i = i
 
-    control = self.p + self.f + self.i + d
+    control = self.p + self.f + self.i + self.d
     self.saturated = self._check_saturation(control, check_saturation, error)
 
     self.errors.append(float(error))
