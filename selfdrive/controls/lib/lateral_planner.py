@@ -73,6 +73,7 @@ class LateralPlanner():
     self.y_pts = np.zeros(TRAJECTORY_SIZE)
     self.d_path_w_lines_xyz = np.zeros((TRAJECTORY_SIZE, 3))
     self.second = 0.0
+    self.lane_pos = 0. # 0., -1., 1. = center, left, right
 
   def setup_mpc(self):
     self.libmpc = libmpc_py.libmpc
@@ -95,13 +96,14 @@ class LateralPlanner():
     if self.second > 1.0:
       self.use_lanelines = not Params().get_bool("EndToEndToggle")
       self.laneless_mode = int(Params().get("LanelessMode", encoding="utf8"))
+      self.lane_pos = float(Params().get("LanePosition", encoding="utf8"))
       self.second = 0.0
     v_ego = sm['carState'].vEgo
     active = sm['controlsState'].active
     measured_curvature = sm['controlsState'].curvature
 
     md = sm['modelV2']
-    self.LP.parse_model(sm['modelV2'])
+    self.LP.parse_model(sm['modelV2'], self.lane_pos)
     if len(md.position.x) == TRAJECTORY_SIZE and len(md.orientation.x) == TRAJECTORY_SIZE:
       self.path_xyz = np.column_stack([md.position.x, md.position.y, md.position.z])
       self.t_idxs = np.array(md.position.t)

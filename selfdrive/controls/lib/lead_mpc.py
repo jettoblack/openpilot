@@ -138,7 +138,7 @@ class DynamicFollow():
   # penalize more for close cut-ins than for far 
   # (greatest of the time/length based distance penalty will be used)
   # (at low speeds, the distance penalty will dominate)
-  cutin_time_dist_penalty_bp = [.2, 1.0, 2.0, 3.0]	# [distance from cut-in in seconds]
+  cutin_time_dist_penalty_bp = [.2, 1.0, 2.0, 2.5]	# [distance from cut-in in seconds]
   cutin_time_dist_penalty_v = [2.5, 1.0, 0.5, 0.0]  # [follow profile change]
 
   cutin_dist_penalty_bp = [i * 0.3 for i in [15, 30., 60.]]	# [distance from cut-in in ft]
@@ -169,8 +169,7 @@ class DynamicFollow():
     t = sec_since_boot()
     dur = t - self.t_last
     self.t_last = t
-    lead_v_rel = v_ego - lead_v
-    lead_gone = (self.has_lead_last and not has_lead) or self.lead_d_last - lead_d < 2.5
+    lead_gone = (self.has_lead_last and not has_lead) or self.lead_d_last - lead_d < -2.5
     new_lead = has_lead and (not self.has_lead_last or self.lead_d_last - lead_d > 2.5)
     if new_lead:
       if v_ego > 0.:
@@ -180,6 +179,7 @@ class DynamicFollow():
         penalty_time = 0.
       penalty_dist = interp(lead_d, self.cutin_dist_penalty_bp, self.cutin_dist_penalty_v)
       penalty_dist = max(penalty_dist, penalty_time)
+      lead_v_rel = v_ego - lead_v
       penalty_vel = interp(lead_v_rel, self.cutin_vel_penalty_bp, self.cutin_vel_penalty_v)
       penalty = max(0., penalty_dist + penalty_vel)
       penalty *= interp(t - self.cutin_t_last, self.cutin_last_t_factor_bp, self.cutin_last_t_factor_v)
