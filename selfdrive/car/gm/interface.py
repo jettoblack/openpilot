@@ -169,6 +169,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 16.0 #14.4  # end to end is 13.46
       ret.steerRatioRear = 0.
       ret.centerToFront = ret.wheelbase * 0.4
+      ret.steerActuatorDelay = 0.24
       ret.lateralTuning.pid.kpBP = [i * CV.MPH_TO_MS for i in [0., 80.]]
       ret.lateralTuning.pid.kpV = [0., 0.2]
       ret.lateralTuning.pid.kiBP = [0.0]
