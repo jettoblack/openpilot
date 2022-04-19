@@ -21,16 +21,17 @@ else:
 
 LANE_WIDTH_DEFAULT = 3.7
 class LaneOffset: 
-  OFFSET = 0.1667 # [unitless] offset of the left/right positions as factor of current lane width
-  OFFSET_MAX = 1.0 # [m]
+  OFFSET = 0.13 # [unitless] offset of the left/right positions as factor of current lane width
+  OFFSET_MAX = 0.8 # [m]
   DUR = 2.0 # [s] time it takes to switch lane positions
   STEP = OFFSET / DUR * DT_MDL * LANE_WIDTH_DEFAULT
   
-  def __init__(self):
+  def __init__(self, mass=0.):
     self.offset = 0.
+    self.offset_scale = interp(float(mass), [1607., 2729.], [1., 0.7]) # scales down offset based on vehicle width (assumed to go as mass)
     
-  def update(self, lane_pos = 0., lane_width = LANE_WIDTH_DEFAULT): # 0., 1., -1. = center, left, right
-    offset = self.OFFSET * lane_pos * lane_width
+  def update(self, lane_pos=0., lane_width=LANE_WIDTH_DEFAULT): # 0., 1., -1. = center, left, right
+    offset = self.OFFSET * self.offset_scale * lane_pos * lane_width
     if offset > self.offset:
       self.offset = min(offset, self.offset + self.STEP)
     elif offset < self.offset:
@@ -38,7 +39,7 @@ class LaneOffset:
     return clip(self.offset, -self.OFFSET_MAX, self.OFFSET_MAX)
   
 class LanePlanner:
-  def __init__(self, wide_camera=False):
+  def __init__(self, wide_camera=False, mass=0.):
     self.ll_t = np.zeros((TRAJECTORY_SIZE,))
     self.ll_x = np.zeros((TRAJECTORY_SIZE,))
     self.lll_y = np.zeros((TRAJECTORY_SIZE,))
@@ -46,7 +47,7 @@ class LanePlanner:
     self.lane_width_estimate = FirstOrderFilter(LANE_WIDTH_DEFAULT, 9.95, DT_MDL)
     self.lane_width_certainty = FirstOrderFilter(1.0, 0.95, DT_MDL)
     self.lane_width = LANE_WIDTH_DEFAULT
-    self.lane_offset = LaneOffset()
+    self.lane_offset = LaneOffset(mass)
 
     self.lll_prob = 0.
     self.rll_prob = 0.

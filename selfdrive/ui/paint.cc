@@ -28,24 +28,7 @@
 #include "selfdrive/ui/ui.h"
 
 
-int offset_button_y(UIState *s, int center_y, int radius){
-  if ((*s->sm)["controlsState"].getControlsState().getAlertSize() == cereal::ControlsState::AlertSize::SMALL){
-    center_y = 2 * center_y / 3 + radius / 2;
-  }
-  else if ((*s->sm)["controlsState"].getControlsState().getAlertSize() == cereal::ControlsState::AlertSize::MID){
-    center_y = (center_y + radius) / 2;
-  }
-  return center_y;
-}
 
-int offset_right_side_button_x(UIState *s, int center_x, int radius, bool doShift = false){
-  if ((doShift || (*s->sm)["controlsState"].getControlsState().getAlertSize() == cereal::ControlsState::AlertSize::SMALL)
-  && s->scene.measure_cur_num_slots > 0){
-    int off = s->scene.measure_slots_rect.right() - center_x;
-    center_x = s->scene.measure_slots_rect.x - off - bdr_s;
-  }
-  return center_x;
-}
 
 static void ui_draw_text(const UIState *s, float x, float y, const char *string, float size, NVGcolor color, const char *font_name) {
   nvgFontFace(s->vg, font_name);
@@ -466,6 +449,8 @@ static void ui_draw_measures(UIState *s){
     nvgFill(s->vg);
 
     UIScene &scene = s->scene;
+
+    char const * deg = Hardware::EON() ? "o" : "°";
     
     // now start from the top and draw the current set of metrics
     for (int i = 0; i < scene.measure_cur_num_slots; ++i){
@@ -491,7 +476,7 @@ static void ui_draw_measures(UIState *s){
         case UIMeasure::CPU_TEMP_AND_PERCENTF: 
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
-          snprintf(val, sizeof(val), "%.0f°F", scene.cpuTemp * 1.8 + 32.);
+          snprintf(val, sizeof(val), "%.0f%sF", scene.cpuTemp * 1.8 + 32., deg);
           snprintf(unit, sizeof(unit), "%d%%", scene.cpuPerc);
           snprintf(name, sizeof(name), "CPU");}
           break;
@@ -500,7 +485,7 @@ static void ui_draw_measures(UIState *s){
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
           snprintf(val, sizeof(val), "%.0f", scene.cpuTemp * 1.8 + 32.);
-          snprintf(unit, sizeof(unit), "°F");
+          snprintf(unit, sizeof(unit), "%sF", deg);
           snprintf(name, sizeof(name), "CPU TEMP");}
           break;
         
@@ -508,7 +493,7 @@ static void ui_draw_measures(UIState *s){
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
           snprintf(val, sizeof(val), "%.0f", scene.deviceState.getMemoryTempC() * 1.8 + 32.);
-          snprintf(unit, sizeof(unit), "°F");
+          snprintf(unit, sizeof(unit), "%sF", deg);
           snprintf(name, sizeof(name), "MEM TEMP");}
           break;
         
@@ -516,14 +501,14 @@ static void ui_draw_measures(UIState *s){
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
           snprintf(val, sizeof(val), "%.0f", scene.deviceState.getAmbientTempC() * 1.8 + 32.);
-          snprintf(unit, sizeof(unit), "°F");
+          snprintf(unit, sizeof(unit), "%sF", deg);
           snprintf(name, sizeof(name), "AMB TEMP");}
           break;
           
         case UIMeasure::CPU_TEMP_AND_PERCENTC: 
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
-            snprintf(val, sizeof(val), "%.0f°C", scene.cpuTemp);
+            snprintf(val, sizeof(val), "%.0f%sC", scene.cpuTemp, deg);
           snprintf(unit, sizeof(unit), "%d%%", scene.cpuPerc);
           snprintf(name, sizeof(name), "CPU");}
           break;
@@ -532,7 +517,7 @@ static void ui_draw_measures(UIState *s){
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
           snprintf(val, sizeof(val), "%.0f", scene.cpuTemp);
-          snprintf(unit, sizeof(unit), "°C");
+          snprintf(unit, sizeof(unit), "%sC", deg);
           snprintf(name, sizeof(name), "CPU TEMP");}
           break;
         
@@ -540,7 +525,7 @@ static void ui_draw_measures(UIState *s){
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
           snprintf(val, sizeof(val), "%.0f", scene.deviceState.getMemoryTempC());
-          snprintf(unit, sizeof(unit), "°C");
+          snprintf(unit, sizeof(unit), "%sC", deg);
           snprintf(name, sizeof(name), "MEM TEMP");}
           break;
         
@@ -548,7 +533,7 @@ static void ui_draw_measures(UIState *s){
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
           snprintf(val, sizeof(val), "%.0f", scene.deviceState.getAmbientTempC());
-          snprintf(unit, sizeof(unit), "°C");
+          snprintf(unit, sizeof(unit), "%sC", deg);
           snprintf(name, sizeof(name), "AMB TEMP");}
           break;
         
@@ -562,8 +547,16 @@ static void ui_draw_measures(UIState *s){
         case UIMeasure::FANSPEED_PERCENT: 
           {
           val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
-          snprintf(val, sizeof(val), "%d%%", scene.deviceState.getFanSpeedPercentDesired());
+          int fs = scene.deviceState.getFanSpeedPercentDesired();
+          snprintf(val, sizeof(val), "%d%%", fs);
           snprintf(name, sizeof(name), "FAN");}
+          break;
+        case UIMeasure::FANSPEED_RPM: 
+          {
+          val_color = color_from_thermal_status(int(scene.deviceState.getThermalStatus()));
+          snprintf(val, sizeof(val), "%d", scene.fanspeed_rpm);
+          snprintf(name, sizeof(name), "FAN");
+          snprintf(unit, sizeof(unit), "RPM");}
           break;
         
         case UIMeasure::MEMORY_USAGE_PERCENT: 
@@ -913,7 +906,7 @@ static void ui_draw_measures(UIState *s){
           b = (b >= 0 ? (b <= 255 ? b : 255) : 0);
           val_color = nvgRGBA(255, g, b, 200);
           // steering is in degrees
-          snprintf(val, sizeof(val), "%.0f°", scene.angleSteers);
+          snprintf(val, sizeof(val), "%.0f%s", scene.angleSteers, deg);
           }
           break;
 
@@ -931,10 +924,10 @@ static void ui_draw_measures(UIState *s){
           val_color = nvgRGBA(255, g, b, 200);
           if (scene.controls_state.getEnabled()) {
             // steering is in degrees
-            snprintf(val, sizeof(val), "%.0f°:%.0f°", scene.angleSteers, scene.angleSteersDes);
+            snprintf(val, sizeof(val), "%.0f%s:%.0f%s", scene.angleSteers, deg, scene.angleSteersDes, deg);
             val_font_size += 12;
           }else{
-            snprintf(val, sizeof(val), "%.0f°", scene.angleSteers);
+            snprintf(val, sizeof(val), "%.0f%s", scene.angleSteers, deg);
           }
           }
           break;
@@ -955,7 +948,7 @@ static void ui_draw_measures(UIState *s){
           {
             snprintf(name, sizeof(name), "ENGINE");
             int temp = scene.car_state.getEngineCoolantTemp();
-            snprintf(unit, sizeof(unit), "%d°C", temp);
+            snprintf(unit, sizeof(unit), "%d%sC", temp, deg);
             if(scene.engineRPM == 0) {
               snprintf(val, sizeof(val), "OFF");
             }
@@ -978,7 +971,7 @@ static void ui_draw_measures(UIState *s){
           {
             snprintf(name, sizeof(name), "ENGINE");
             int temp = int(float(scene.car_state.getEngineCoolantTemp()) * 1.8 + 32.5);
-            snprintf(unit, sizeof(unit), "%d°F", temp);
+            snprintf(unit, sizeof(unit), "%d%sF", temp, deg);
             if(scene.engineRPM == 0) {
               snprintf(val, sizeof(val), "OFF");
             }
@@ -1000,7 +993,7 @@ static void ui_draw_measures(UIState *s){
         case UIMeasure::COOLANT_TEMPC: 
           {
             snprintf(name, sizeof(name), "COOLANT");
-            snprintf(unit, sizeof(unit), "°C");
+            snprintf(unit, sizeof(unit), "%sC", deg);
             int temp = scene.car_state.getEngineCoolantTemp();
             snprintf(val, sizeof(val), "%d", temp);
             if(scene.engineRPM > 0) {
@@ -1020,7 +1013,7 @@ static void ui_draw_measures(UIState *s){
         case UIMeasure::COOLANT_TEMPF: 
           {
             snprintf(name, sizeof(name), "COOLANT");
-            snprintf(unit, sizeof(unit), "°F");
+            snprintf(unit, sizeof(unit), "%sF", deg);
             int temp = int(float(scene.car_state.getEngineCoolantTemp()) * 1.8 + 32.5);
             snprintf(val, sizeof(val), "%d", temp);
             if(scene.engineRPM > 0) {
@@ -1192,10 +1185,32 @@ static void ui_draw_measures(UIState *s){
             val_color = nvgRGBA(255, g, b, 200);
           }
           break;
+          
+        case UIMeasure::LANE_WIDTH: 
+          {
+            snprintf(name, sizeof(name), "LANE W");
+            if (s->is_metric){
+              snprintf(unit, sizeof(unit), "m");
+              snprintf(val, sizeof(val), "%f.1", scene.lateralPlan.laneWidth);
+            }
+            else{
+              snprintf(unit, sizeof(unit), "ft");
+              snprintf(val, sizeof(val), "%.1f", scene.lateralPlan.laneWidth * 3.281);
+            }
+          }
+          break;
+          
+        case UIMeasure::DEVICE_BATTERY: 
+          {
+            snprintf(name, sizeof(name), "DEVICE BATT.");
+            snprintf(unit, sizeof(unit), "%.1f A", float(scene.deviceState.getBatteryCurrent()) * 1e-6);
+            snprintf(val, sizeof(val), "%d", scene.deviceState.getBatteryPercent());
+          }
+          break;
 
         default: {// invalid number
           snprintf(name, sizeof(name), "INVALID");
-          snprintf(val, sizeof(val), "⚠️");}
+          snprintf(val, sizeof(val), "42");}
           break;
       }
 
@@ -1476,7 +1491,7 @@ static void ui_draw_vision_brake(UIState *s) {
 
 static void draw_lane_pos_buttons(UIState *s) {
   if (s->vipc_client->connected && s->scene.lane_pos_enabled) {
-    const int radius = 108;
+    const int radius = ((*s->sm)["controlsState"].getControlsState().getAlertSize() == cereal::ControlsState::AlertSize::NONE ? 220 : 100);
     const int right_x = (s->scene.measure_cur_num_slots > 0 
                           ? s->scene.measure_slots_rect.x - 4 * radius / 3
                           : 4 * s->fb_w / 5);
@@ -1495,8 +1510,11 @@ static void draw_lane_pos_buttons(UIState *s) {
       nvgRoundedRect(s->vg, left_x - radius_inner, y - radius_inner, 2 * radius_inner, 2 * radius_inner, radius_inner);
       nvgFillColor(s->vg, COLOR_WHITE_ALPHA(200));
       nvgFill(s->vg);
+      ui_draw_circle_image(s, left_x, y, radius, "lane_pos_left", COLOR_BLACK_ALPHA(80), 1.0);
     }
-    ui_draw_circle_image(s, left_x, y, radius, "lane_pos_left", COLOR_BLACK_ALPHA(80), 255);
+    else{
+      ui_draw_circle_image(s, left_x, y, radius, "lane_pos_left", COLOR_BLACK_ALPHA(80), 0.4);
+    }
     
     if (s->scene.lane_pos == 1){
       // outline of button when active
@@ -1518,8 +1536,11 @@ static void draw_lane_pos_buttons(UIState *s) {
       nvgRoundedRect(s->vg, right_x - radius_inner, y - radius_inner, 2 * radius_inner, 2 * radius_inner, radius_inner);
       nvgFillColor(s->vg, COLOR_WHITE_ALPHA(200));
       nvgFill(s->vg);
+      ui_draw_circle_image(s, right_x, y, radius, "lane_pos_right", COLOR_BLACK_ALPHA(80), 1.0);
     }
-    ui_draw_circle_image(s, right_x, y, radius, "lane_pos_right", COLOR_BLACK_ALPHA(80), 255);
+    else{
+      ui_draw_circle_image(s, right_x, y, radius, "lane_pos_right", COLOR_BLACK_ALPHA(80), 0.4);
+    }
     if (s->scene.lane_pos == -1){
       // outline of button when active
       nvgBeginPath(s->vg);

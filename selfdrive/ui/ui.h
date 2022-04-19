@@ -162,8 +162,10 @@ typedef enum UIMeasure { //rearrange here to adjust order when cycling measures
   AMBIENT_TEMPF,
   AMBIENT_TEMPC,
   FANSPEED_PERCENT,
+  FANSPEED_RPM,
   MEMORY_USAGE_PERCENT,
   FREESPACE_STORAGE,
+  DEVICE_BATTERY,
   HVB_VOLTAGE,
   HVB_CURRENT,
   HVB_WATTAGE,
@@ -171,6 +173,7 @@ typedef enum UIMeasure { //rearrange here to adjust order when cycling measures
   VISION_CURLATACCEL,
   VISION_MAXVFORCURCURV,
   VISION_MAXPREDLATACCEL,
+  LANE_WIDTH,
   
   NUM_MEASURES
 } UIMeasure;
@@ -203,9 +206,9 @@ typedef struct UIScene {
   
   float screen_dim_modes_v[3] = {0.01, 0.5, 1.};
   int screen_dim_mode_max = 2;
-  int screen_dim_mode_cur = screen_dim_mode_max, 
-    screen_dim_mode = screen_dim_mode_max, 
-    screen_dim_mode_last = screen_dim_mode_max;
+  int screen_dim_mode_cur = screen_dim_mode_max; 
+  int screen_dim_mode = screen_dim_mode_cur, 
+    screen_dim_mode_last = screen_dim_mode_cur;
   float screen_dim_fade = -1., screen_dim_fade_last_t = 0., screen_dim_fade_step = 1;
   float screen_dim_fade_dur_up = 0.5, screen_dim_fade_dur_down = 2.;
   Rect screen_dim_touch_rect;
@@ -243,6 +246,7 @@ typedef struct UIScene {
   float desiredFollowDistance, followDistanceCost, followAccelCost;
   float stoppingDistance;
   float percentGradeDevice;
+  int fanspeed_rpm = 0;
   
   float lastTime = 0., sessionInitTime = 0.;
   float paramsCheckLast = 0., paramsCheckFreq = 0.1; // check params at 10Hz
@@ -416,3 +420,7 @@ public slots:
 };
 
 NVGcolor interp_alert_color(float p, int a);
+
+int offset_button_y(UIState *s, int center_y, int radius);
+
+int offset_right_side_button_x(UIState *s, int center_x, int radius, bool doShift = false);

@@ -42,7 +42,7 @@ DESIRES = {
 class LateralPlanner():
   def __init__(self, CP, use_lanelines=True, wide_camera=False):
     self.use_lanelines = use_lanelines
-    self.LP = LanePlanner(wide_camera)
+    self.LP = LanePlanner(wide_camera, CP.mass)
 
     self.last_cloudlog_t = 0
 

@@ -198,6 +198,7 @@ void HomeWindow::mousePressEvent(QMouseEvent* e) {
     }
     else{
       QUIState::ui_state.scene.lane_pos = 1;
+      QUIState::ui_state.scene.lane_pos_timeout = QUIState::ui_state.scene.lane_pos_timeout_short_t;
       QUIState::ui_state.scene.lane_pos_set_t = QUIState::ui_state.scene.lastTime;
       Params().put("LanePosition", "1", 1);
     }
@@ -215,6 +216,7 @@ void HomeWindow::mousePressEvent(QMouseEvent* e) {
     }
     else{
       QUIState::ui_state.scene.lane_pos = -1;
+      QUIState::ui_state.scene.lane_pos_timeout = QUIState::ui_state.scene.lane_pos_timeout_short_t;
       QUIState::ui_state.scene.lane_pos_set_t = QUIState::ui_state.scene.lastTime;
       Params().put("LanePosition", "-1", 2);
     }
@@ -266,6 +268,7 @@ OffroadHome::OffroadHome(QWidget* parent) : QFrame(parent) {
   statsAndSetup->setMargin(0);
   statsAndSetup->setSpacing(30);
   statsAndSetup->addWidget(new DriveStats, 1);
+  statsAndSetup->addWidget(new SetupWidget);
 
   center_layout->addWidget(statsAndSetupWidget);
 

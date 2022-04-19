@@ -222,7 +222,7 @@ static void update_state(UIState *s) {
     const Rect maxspeed_rect = {bdr_s * 2, int(bdr_s * 1.5), 184, 202};
     const int radius = 96;
     const int center_x = maxspeed_rect.centerX();
-    const int center_y = s->fb_h - footer_h / 2;
+    const int center_y = offset_button_y(s, s->fb_h - footer_h / 2, radius);
     scene.screen_dim_touch_rect = {center_x - (1+scene.screen_dim_mode_max-scene.screen_dim_mode) * radius, center_y - (1+scene.screen_dim_mode_max-scene.screen_dim_mode) * radius, (2*(1+scene.screen_dim_mode_max-scene.screen_dim_mode)) * radius, (2*(1+scene.screen_dim_mode_max-scene.screen_dim_mode)) * radius};
     
     if (s->status == STATUS_WARNING){
@@ -359,6 +359,7 @@ static void update_state(UIState *s) {
   }
   if (sm.updated("pandaState")) {
     auto pandaState = sm["pandaState"].getPandaState();
+    scene.fanspeed_rpm = pandaState.getFanSpeedRpm();
     scene.pandaType = pandaState.getPandaType();
     scene.ignition = pandaState.getIgnitionLine() || pandaState.getIgnitionCan();
   } else if ((s->sm->frame - s->sm->rcv_frame("pandaState")) > 5*UI_FREQ) {
@@ -389,7 +390,7 @@ static void update_state(UIState *s) {
     float max_gain = Hardware::EON() ? 1.0: 10.0;
     float max_ev = max_lines * max_gain;
 
-    if (Hardware::TICI) {
+    if (Hardware::TICI()) {
       max_ev /= 6;
     }
 
@@ -546,6 +547,10 @@ static void update_status(UIState *s) {
       s->status = STATUS_DISENGAGED;
       s->scene.started_frame = s->sm->frame;
 
+      if (Params().getBool("LowOverheadMode") && s->scene.screen_dim_mode_cur == s->scene.screen_dim_mode_max){
+        s->scene.screen_dim_mode_cur -= 1;
+        Params().put("ScreenDimMode", std::to_string(s->scene.screen_dim_mode_cur).c_str(), 1);
+      }
       s->scene.end_to_end = Params().getBool("EndToEndToggle");
       if (!s->scene.end_to_end){
         s->scene.laneless_btn_touch_rect = {1,1,1,1};
@@ -718,4 +723,23 @@ void Device::updateWakefulness(const UIState &s) {
   }
 
   setAwake(awake_timeout, should_wake);
+}
+
+int offset_button_y(UIState *s, int center_y, int radius){
+  if ((*s->sm)["controlsState"].getControlsState().getAlertSize() == cereal::ControlsState::AlertSize::SMALL){
+    center_y = 2 * center_y / 3 + radius / 2;
+  }
+  else if ((*s->sm)["controlsState"].getControlsState().getAlertSize() == cereal::ControlsState::AlertSize::MID){
+    center_y = (center_y + radius) / 2;
+  }
+  return center_y;
+}
+
+int offset_right_side_button_x(UIState *s, int center_x, int radius, bool doShift){
+  if ((doShift || (*s->sm)["controlsState"].getControlsState().getAlertSize() == cereal::ControlsState::AlertSize::SMALL)
+  && s->scene.measure_cur_num_slots > 0){
+    int off = s->scene.measure_slots_rect.right() - center_x;
+    center_x = s->scene.measure_slots_rect.x - off - bdr_s;
+  }
+  return center_x;
 }

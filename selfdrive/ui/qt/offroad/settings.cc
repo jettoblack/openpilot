@@ -210,6 +210,21 @@ TogglesPanel::TogglesPanel(QWidget *parent) : QWidget(parent) {
                                   "Mute engage and disengage sounds.",
                                   "../assets/offroad/icon_mute.png",
                                   this));
+  toggles.append(new ParamControl("IgnoreMissingNVME",
+                                  "Ignore missing NVME",
+                                  "Prevent an error about missing NVME drive from showing on 32GB C3's. (restart device for change to take effect)",
+                                  "../assets/offroad/icon_settings.png",
+                                  this));
+  toggles.append(new ParamControl("FPVolt",
+                                  "Volt Fingerprint",
+                                  "Forces Volt fingerprint",
+                                  "../assets/offroad/icon_settings.png",
+                                  this));
+  toggles.append(new ParamControl("LowOverheadMode",
+                                  "Lower device overhead",
+                                  "Decreases device power, CPU, and storage use for running better on older hardware by: 1) defaulting to medium brightness (tap DM icon to change), 2) disable onroad logging (loggerd and proclogd). Your device will not keep or upload logs with this enabled!",
+                                  "../assets/offroad/icon_settings.png",
+                                  this));
   toggles.append(new ParamControl("ShowDebugUI",
                                   "Show debug UI elements",
                                   "Show UI elements that aid debugging.",

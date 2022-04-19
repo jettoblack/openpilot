@@ -38,6 +38,7 @@ def manager_init():
     ("HandsOnWheelMonitoring", "0"),
     ("OpenpilotEnabledToggle", "1"),
     ("ShowDebugUI", "1"),
+    ("IgnoreMissingNVME", "0"),
     ("SpeedLimitControl", "1"),
     ("SpeedLimitPercOffset", "1"),
     ("TurnSpeedControl", "1"),
@@ -72,6 +73,8 @@ def manager_init():
     ("FrictionBrakePercent", "0"),
     ("BrakeIndicator", "1"),
     ("DisableOnroadUploads", "0"),
+    ("LowOverheadMode", "0"),
+    ("FPVolt", "0"),
     ("MeasureNumSlots", "0"),
     ("MeasureSlot00", "0"), # steering angle
     ("MeasureSlot01", "11"), # percent grade
@@ -185,6 +188,9 @@ def manager_thread():
 
     if sm['deviceState'].freeSpacePercent < 5:
       not_run.append("loggerd")
+    elif params.get_bool("LowOverheadMode"):
+      low_overhead_ignore = ["loggerd","proclogd"]
+      not_run += low_overhead_ignore
 
     started = sm['deviceState'].started
     driverview = params.get_bool("IsDriverViewEnabled")

@@ -13,9 +13,12 @@
 
 ### Infographics
 ------
-![](https://user-images.githubusercontent.com/37757984/127420744-89ca219c-8f8e-46d3-bccf-c1cb53b81bb1.png)
-![](https://github.com/twilsonco/openpilot/blob/tw-0.8.9-dev/fork_image_onepedal.png?raw=true)
 ![](https://github.com/twilsonco/openpilot/blob/tw-0.8.9-dev/fork_image_touchcontrols.png?raw=true)
+![](https://github.com/twilsonco/openpilot/blob/tw-0.8.9-dev/fork_image_onepedal.png?raw=true)
+![](https://github.com/twilsonco/openpilot/blob/tw-0.8.9-dev/fork_image_coasting.png?raw=true)
+![](https://github.com/twilsonco/openpilot/blob/tw-0.8.9-dev/fork_image_lane_position.png?raw=true)
+![](https://github.com/twilsonco/openpilot/blob/tw-0.8.9-dev/fork_image_brake_indicator.png?raw=true)
+![](https://github.com/twilsonco/openpilot/blob/tw-0.8.9-dev/fork_image_metrics.png?raw=true)
 ![](https://github.com/twilsonco/openpilot/blob/tw-0.8.9-dev/fork_image_misc.png?raw=true)
 
 ### Appreciate My Work?
@@ -55,6 +58,9 @@
 - [x] [Chevy Volt] Sigmoidal steering response (thanks qadmus)
 - [x] [GM] [✅] AutoHold (autohold brakes when stopped; ported from kegman)
 - [x] [GM] Adjustable follow "mode" using ACC distance button (ported from kegman, but smoother follow profiles)
+- [x] Adjustable lane position using onscreen buttons
+    * Tap buttons to change lane position for 15 seconds; double-tap to change for 10 minutes
+    * Tap again to go back to center position
 - [x] [GM] [✅] Dynamic follow mode
 - [x] [GM] Toggle steering with LKAS button (wheel color changes to indicate disengagement)
 - [x] [GM] One-pedal driving a.k.a. autosteering only a.k.a. toggle longitudinal control: using regen (volt) and/or light/moderate/heavy braking, control OP all the way to a stop, without a lead, and without disengaging, with just the gas pedal (see below) (application of friction brakes originally suggested by cybertronicify — 10/06/2021)

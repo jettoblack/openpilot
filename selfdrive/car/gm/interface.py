@@ -7,7 +7,8 @@ from common.params import Params
 from selfdrive.swaglog import cloudlog
 from selfdrive.config import Conversions as CV
 from selfdrive.car.gm.values import CAR, CruiseButtons, \
-                                    AccState, CarControllerParams
+                                    AccState, CarControllerParams, \
+                                    FINGERPRINTS
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint
 from selfdrive.car.interfaces import CarInterfaceBase
 from selfdrive.controls.lib.longitudinal_planner import _A_CRUISE_MAX_V_SPORT, \
@@ -21,8 +22,8 @@ _A_MIN_V_STOCK_FACTOR_BP = [-5. * CV.MPH_TO_MS, 1. * CV.MPH_TO_MS]
 _A_MIN_V_STOCK_FACTOR_V = [0., 1.]
 
 # increase/decrease max accel based on vehicle pitch
-INCLINE_ACCEL_SCALE_BP = [i * CV.MPH_TO_MS for i in [25., 45]] # [mph] lookup speeds for additional offset
-INCLINE_ACCEL_SCALE_V = [1.5, 1.3] # [m/s^2] additional scale factor to change how incline affects accel based on speed
+INCLINE_ACCEL_SCALE_BP = [i * CV.MPH_TO_MS for i in [25., 75]] # [mph] lookup speeds for additional offset
+INCLINE_ACCEL_SCALE_V = [1.5, 1.4] # [m/s^2] additional scale factor to change how incline affects accel based on speed
 INCLINE_ACCEL_MAX_SPORT_FACTOR = 0.9 # acceleration will never be increased to more than this factor of the "sport" acceleration at the current speed
 DECLINE_ACCEL_FACTOR = 0.5 # this factor of g accel is used to lower max accel limit so you don't floor it downhill
 DECLINE_ACCEL_MIN = 0.2 # [m/s^2] don't decrease acceleration limit due to decline below this total value
@@ -52,7 +53,7 @@ class CarInterface(CarInterfaceBase):
       accel_limits[1] = max(DECLINE_ACCEL_MIN, accel_limits[1] + g_accel * DECLINE_ACCEL_FACTOR)
     
     time_since_engage = CI.CS.t - CI.CS.cruise_enabled_last_t
-    if time_since_engage < CI.CS.cruise_enabled_neg_accel_ramp_bp[-1]:
+    if CI.CS.coasting_lead_d > 0. and time_since_engage < CI.CS.cruise_enabled_neg_accel_ramp_bp[-1]:
       accel_limits[0] *= interp(time_since_engage, CI.CS.cruise_enabled_neg_accel_ramp_bp, CI.CS.cruise_enabled_neg_accel_ramp_v)
       
     return [max(CI.params.ACCEL_MIN, accel_limits[0]), min(accel_limits[1], CI.params.ACCEL_MAX)]
@@ -135,13 +136,13 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.pid.kdBP = [i * CV.MPH_TO_MS for i in [15., 30., 55.]]
       ret.lateralTuning.pid.kdV = [0.1, 0.25, 0.3]
       ret.lateralTuning.pid.kf = 1. # !!! ONLY for sigmoid feedforward !!!
-      ret.steerActuatorDelay = 0.2
+      ret.steerActuatorDelay = 0.18
 
       # Only tuned to reduce oscillations. TODO.
-      ret.longitudinalTuning.kpV = [1.7, 1.3]
+      ret.longitudinalTuning.kpV = [1.4, 1.3]
       ret.longitudinalTuning.kiBP = [5., 35.]
-      ret.longitudinalTuning.kiV = [0.31, 0.34]
-      ret.longitudinalTuning.kdV = [0.8, 0.4]
+      ret.longitudinalTuning.kiV = [0.23, 0.34]
+      ret.longitudinalTuning.kdV = [0.5, 0.4]
       ret.longitudinalTuning.kdBP = [5., 25.]
 
     elif candidate == CAR.MALIBU:
