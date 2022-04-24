@@ -132,9 +132,10 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.init('torque')
       ret.lateralTuning.torque.useSteeringAngle = True
       ret.lateralTuning.torque.kp = 2.0 / max_torque
-      ret.lateralTuning.torque.kf = 1.0 / max_torque
-      ret.lateralTuning.torque.ki = 0.5 / max_torque
-      ret.lateralTuning.torque.friction = 0.01
+      ret.lateralTuning.torque.ki = 0.8 / max_torque
+      ret.lateralTuning.torque.kd = 5.0 / max_torque
+      ret.lateralTuning.torque.kf = 1.2 / max_torque
+      ret.lateralTuning.torque.friction = 0.02
       ret.steerActuatorDelay = 0.18
 
       # Only tuned to reduce oscillations. TODO.
@@ -175,9 +176,10 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.init('torque')
       ret.lateralTuning.torque.useSteeringAngle = True
       ret.lateralTuning.torque.kp = 2.0 / max_torque
-      ret.lateralTuning.torque.kf = 1.0 / max_torque
-      ret.lateralTuning.torque.ki = 0.5 / max_torque
-      ret.lateralTuning.torque.friction = 0.01
+      ret.lateralTuning.torque.ki = 0.8 / max_torque
+      ret.lateralTuning.torque.kd = 5.0 / max_torque
+      ret.lateralTuning.torque.kf = 1.5 / max_torque
+      ret.lateralTuning.torque.friction = 0.05
       ret.steerActuatorDelay = 0.18
 
       ret.longitudinalTuning.kdBP = [5., 25.]
