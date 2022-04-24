@@ -26,18 +26,23 @@ class LatControlTorque(LatControl):
   def __init__(self, CP, CI):
     super().__init__(CP, CI)
     self.pid = LiveTorquePIDController(CP.lateralTuning.torque.kp, CP.lateralTuning.torque.ki,
+                            k_d=CP.lateralTuning.torque.kd, derivative_period=0.1,
                             k_f=CP.lateralTuning.torque.kf, pos_limit=1.0, neg_limit=-1.0)
     self.get_steer_feedforward = CI.get_steer_feedforward_function()
     self.steer_max = 1.0
     self.pid.pos_limit = self.steer_max
     self.pid.neg_limit = -self.steer_max
-    self.use_steering_angle = CP.lateralTuning.torque.useSteeringAngle
+    self._use_steering_angle = CP.lateralTuning.torque.useSteeringAngle
     self._friction = CP.lateralTuning.torque.friction
     self.op_params = opParams()
 
   @property
   def friction(self):
     return self.op_params.get('FRICTION')
+  
+  @property
+  def use_steering_angle(self):
+    return self.op_params.get('USE_STEERING_ANGLE')
 
   def reset(self):
     super().reset()

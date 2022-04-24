@@ -42,8 +42,32 @@ class opParams:
 
         self.default_params = {
             "FRICTION": {
-                "default": 0.01,
+                "default": 0.02,
                 "clip": [0.001, 0.2],
+                "allowed_types": [float],
+                "live": True,
+            },
+            "K_P_NUMERATOR": {
+                "default": 2.0,
+                "clip": [0.1, 10.],
+                "allowed_types": [float],
+                "live": True,
+            },
+            "K_I_NUMERATOR": {
+                "default": 0.8,
+                "clip": [0.1, 10.],
+                "allowed_types": [float],
+                "live": True,
+            },
+            "K_D_NUMERATOR": {
+                "default": 5.0,
+                "clip": [0.1, 10.],
+                "allowed_types": [float],
+                "live": True,
+            },
+            "K_F_NUMERATOR": {
+                "default": 1.2,
+                "clip": [0.1, 10.],
                 "allowed_types": [float],
                 "live": True,
             },
@@ -51,6 +75,11 @@ class opParams:
                 "default": 3.0,
                 "clip": [1.0, 5.0],
                 "allowed_types": [float],
+                "live": True,
+            },
+            "USE_STEERING_ANGLE": {
+                "default": True,
+                "allowed_types": [bool],
                 "live": True,
             },
             "op_edit_live_mode": {

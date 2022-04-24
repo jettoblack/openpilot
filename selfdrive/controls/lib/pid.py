@@ -166,12 +166,16 @@ class PIDController:
 class LiveTorquePIDController(PIDController):
   @property
   def k_p(self):
-    return 2. / self.op_params.get('MAX_LAT_ACCEL')
+    return self.op_params.get('K_P_NUMERATOR') / self.op_params.get('MAX_LAT_ACCEL')
 
   @property
   def k_i(self):
-    return 0.5 / self.op_params.get('MAX_LAT_ACCEL')
+    return self.op_params.get('K_I_NUMERATOR') / self.op_params.get('MAX_LAT_ACCEL')
+
+  @property
+  def k_d(self):
+    return self.op_params.get('K_D_NUMERATOR') / self.op_params.get('MAX_LAT_ACCEL')
 
   @property
   def k_f(self):
-    return 1.0 / self.op_params.get('MAX_LAT_ACCEL')
+    return self.op_params.get('K_F_NUMERATOR') / self.op_params.get('MAX_LAT_ACCEL')
