@@ -128,14 +128,13 @@ class CarInterface(CarInterfaceBase):
       tire_stiffness_factor = 0.469 # Stock Michelin Energy Saver A/S, LiveParameters
       ret.steerRatioRear = 0.
       ret.centerToFront = 0.45 * ret.wheelbase # from Volt Gen 1
-
-      ret.lateralTuning.pid.kpBP = [0., 40.]
-      ret.lateralTuning.pid.kpV = [0., .16]
-      ret.lateralTuning.pid.kiBP = [0.]
-      ret.lateralTuning.pid.kiV = [.028]
-      ret.lateralTuning.pid.kdBP = [0.]
-      ret.lateralTuning.pid.kdV = [.6]
-      ret.lateralTuning.pid.kf = 1. # !!! ONLY for sigmoid feedforward !!!
+      max_torque = 3.0
+      ret.lateralTuning.init('torque')
+      ret.lateralTuning.torque.useSteeringAngle = True
+      ret.lateralTuning.torque.kp = 2.0 / max_torque
+      ret.lateralTuning.torque.kf = 1.0 / max_torque
+      ret.lateralTuning.torque.ki = 0.5 / max_torque
+      ret.lateralTuning.torque.friction = 0.08
       ret.steerActuatorDelay = 0.18
 
       # Only tuned to reduce oscillations. TODO.
