@@ -37,7 +37,7 @@ class LatControlTorque(LatControl):
     super().reset()
     self.pid.reset()
 
-  def update(self, active, CS, CP, VM, params, last_actuators, desired_curvature, desired_curvature_rate, llk = None):
+  def update(self, active, CS, CP, VM, params, desired_curvature, desired_curvature_rate, llk = None):
     pid_log = log.ControlsState.LateralTorqueState.new_message()
 
     if CS.vEgo < MIN_STEER_SPEED or not active:
