@@ -59,7 +59,7 @@ class LatControlTorque(LatControl):
       pid_log.error = error
 
       ff = desired_lateral_accel - params.roll * ACCELERATION_DUE_TO_GRAVITY
-      output_torque = self.pid.update(error,
+      output_torque = self.pid.update(setpoint, measurement,
                                       override=CS.steeringPressed, feedforward=ff,
                                       speed=CS.vEgo,
                                       freeze_integrator=CS.steeringRateLimited)
