@@ -82,6 +82,11 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.torque.friction = 0.02
       ret.steerActuatorDelay = 0.2
 
+      ret.longitudinalTuning.kpBP = [5., 15., 35.]
+      ret.longitudinalTuning.kpV = [1.25, 1.6, 1.3]
+      ret.longitudinalTuning.kiBP = [5., 15., 35.]
+      ret.longitudinalTuning.kiV = [0.2, 0.31, 0.34]
+
     elif candidate == CAR.MALIBU:
       # supports stop and go, but initial engage must be above 18mph (which include conservatism)
       ret.minEnableSpeed = 18 * CV.MPH_TO_MS
