@@ -73,11 +73,13 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatioRear = 0.
       ret.centerToFront = ret.wheelbase * 0.45 # Volt Gen 1, TODO corner weigh
 
-      ret.lateralTuning.pid.kpBP = [0., 40.]
-      ret.lateralTuning.pid.kpV = [0., 0.17]
-      ret.lateralTuning.pid.kiBP = [0.]
-      ret.lateralTuning.pid.kiV = [0.]
-      ret.lateralTuning.pid.kf = 1. # get_steer_feedforward_volt()
+      ret.lateralTuning.init('torque')
+      ret.lateralTuning.torque.useSteeringAngle = True
+      max_torque = 2.3
+      ret.lateralTuning.torque.kp = 1.0 / max_torque
+      ret.lateralTuning.torque.ki = 0.25 / max_torque
+      ret.lateralTuning.torque.kf = 1.0 / max_torque
+      ret.lateralTuning.torque.friction = 0.02
       ret.steerActuatorDelay = 0.2
 
     elif candidate == CAR.MALIBU:
