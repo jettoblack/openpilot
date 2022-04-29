@@ -171,16 +171,15 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 16.0 #14.4  # end to end is 13.46
       ret.steerRatioRear = 0.
       ret.centerToFront = ret.wheelbase * 0.4
-      ret.steerActuatorDelay = 0.24
+      ret.steerActuatorDelay = 0.35
       max_torque = 3.0
       ret.lateralTuning.init('torque')
       ret.lateralTuning.torque.useSteeringAngle = True
       ret.lateralTuning.torque.kp = 2.0 / max_torque
-      ret.lateralTuning.torque.ki = 0.8 / max_torque
-      ret.lateralTuning.torque.kd = 5.0 / max_torque
-      ret.lateralTuning.torque.kf = 1.5 / max_torque
-      ret.lateralTuning.torque.friction = 0.05
-      ret.steerActuatorDelay = 0.18
+      ret.lateralTuning.torque.ki = 0.5 / max_torque
+      ret.lateralTuning.torque.kd = 0.0 / max_torque
+      ret.lateralTuning.torque.kf = 1.6 / max_torque
+      ret.lateralTuning.torque.friction = 0.08
 
       ret.longitudinalTuning.kdBP = [5., 25.]
       ret.longitudinalTuning.kdV = [0.8, 0.4]
