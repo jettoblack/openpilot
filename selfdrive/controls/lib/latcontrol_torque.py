@@ -2,6 +2,7 @@ import math
 
 from cereal import log
 from common.numpy_fast import interp
+from selfdrive.car.interfaces import CarInterfaceBase
 from selfdrive.controls.lib.latcontrol import LatControl, MIN_STEER_SPEED
 from selfdrive.controls.lib.pid import PIDController
 from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
@@ -31,6 +32,7 @@ class LatControlTorque(LatControl):
     self.get_steer_feedforward = CI.get_steer_feedforward_function()
     self.use_steering_angle = CP.lateralTuning.torque.useSteeringAngle
     self.friction = CP.lateralTuning.torque.friction
+    self.get_steer_feedforward = CI.get_steer_feedforward_function()
 
   def reset(self):
     super().reset()
@@ -57,7 +59,19 @@ class LatControlTorque(LatControl):
       error = setpoint - measurement
       pid_log.error = error
 
-      ff = desired_lateral_accel - params.roll * ACCELERATION_DUE_TO_GRAVITY
+      # record desired steering angle to the unused pid_log.error_rate
+      angle_steers_des_no_offset = math.degrees(VM.get_steer_from_curvature(-desired_curvature, CS.vEgo, params.roll))
+      angle_steers_des = angle_steers_des_no_offset + params.angleOffsetDeg
+      pid_log.errorRate = angle_steers_des - CS.steeringAngleDeg
+      
+      if self.get_steer_feedforward == CarInterfaceBase.get_steer_feedforward_default:
+        ff = desired_lateral_accel - params.roll * ACCELERATION_DUE_TO_GRAVITY
+      else:
+        ff_angle = self.get_steer_feedforward(angle_steers_des_no_offset, CS.vEgo)
+        ff_curvature = -VM.calc_curvature(math.radians(ff_angle), CS.vEgo, params.roll)
+        ff_lateral_accel = ff_curvature * CS.vEgo**2
+        ff = ff_lateral_accel - params.roll * ACCELERATION_DUE_TO_GRAVITY
+
       # convert friction into lateral accel units for feedforward
       friction_compensation = interp(desired_lateral_jerk, [-JERK_THRESHOLD, JERK_THRESHOLD], [-self.friction, self.friction])
       ff += friction_compensation / self.CP.lateralTuning.torque.kf
