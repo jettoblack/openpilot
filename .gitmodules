@@ -1,7 +1,7 @@
 [submodule "panda"]
 	path = panda
 	url = ../../twilsonco/panda.git
-	branch = tw-0.8.9-acadia
+	branch = tw-0.8.9-dev
 [submodule "opendbc"]
 	path = opendbc
 	url = ../../twilsonco/opendbc.git
