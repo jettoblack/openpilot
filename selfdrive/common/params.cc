@@ -139,7 +139,9 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"CurrentRoute", CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON},
     {"DisableRadar", PERSISTENT}, // WARNING: THIS DISABLES AEB
     {"EndToEndToggle", PERSISTENT},
+    {"EnableTorqueControl", PERSISTENT},
     {"CompletedTrainingVersion", PERSISTENT},
+    {"ColorPath", PERSISTENT},
     {"DisablePowerDown", PERSISTENT},
     {"DisableUpdates", PERSISTENT},
     {"DisableDisengageOnGas", PERSISTENT},
@@ -215,6 +217,8 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"TrainingVersion", PERSISTENT},
     {"TurnSpeedControl", PERSISTENT},
     {"TurnVisionControl", PERSISTENT},
+    {"TurnSpeedControlEnabled", PERSISTENT},
+    {"TurnVisionControlEnabled", PERSISTENT},
     {"GMAutoHold", PERSISTENT},
     {"AccelModeButton", PERSISTENT},
     {"AccelMode", PERSISTENT},

@@ -131,6 +131,7 @@ typedef struct {
 typedef enum UIMeasure { //rearrange here to adjust order when cycling measures
   STEERING_ANGLE = 0,
   DESIRED_STEERING_ANGLE,
+  STEERING_ANGLE_ERROR,
   STEERING_TORQUE_EPS,
   ENGINE_RPM,
   ENGINE_RPM_TEMPC,
@@ -186,11 +187,14 @@ typedef struct UIScene {
   // Debug UI
   bool show_debug_ui;
 
+  bool is_using_torque_control = false;
+
   // Speed limit control
   bool speed_limit_control_enabled;
   bool speed_limit_perc_offset;
   Rect speed_limit_sign_touch_rect;
   double last_speed_limit_sign_tap;
+  bool turn_speed_control_enabled, turn_vision_control_enabled;
   
   // adjustable lane position
   Rect lane_pos_left_touch_rect = {1,1,1,1}, lane_pos_right_touch_rect = {1,1,1,1};
@@ -203,6 +207,8 @@ typedef struct UIScene {
   
   Rect wheel_touch_rect;
   bool wheel_rotates = true;
+
+  bool color_path = false;
   
   float screen_dim_modes_v[3] = {0.01, 0.5, 1.};
   int screen_dim_mode_max = 2;
@@ -226,19 +232,10 @@ typedef struct UIScene {
   Rect speed_rect;
   
   // actual measures
-  float angleSteers;
-  float angleSteersDes;
+  float angleSteers, angleSteersDes, angleSteersErr;
   float lateralCorrection;
-  float gpsAccuracyUblox;
-  float altitudeUblox = 0.;
   int engineRPM;
   bool steerOverride;
-  float steeringTorqueEps;
-  float aEgo;
-  float latAccel = 0.;
-  float vision_cur_lat_accel, vision_max_v_cur_curv, vision_max_pred_lat_accel;
-  float cpuTemp;
-  int cpuPerc;
   int thermalStatus;
   int percentGradeRollingIter = 0, percentGradeNumSamples = 10;
   float percentGradeAltitudes[10], percentGradePositions[10], percentGrades[10], percentGradeCurDist = 0., percentGradeLenStep = 5., percentGradeLastTime = 0., percentGrade = 0., percentGradeMinDist = 200.;
@@ -256,6 +253,7 @@ typedef struct UIScene {
   float lead_d_rel, lead_v_rel, lead_v;
 
   // gps
+  float altitudeUblox, gpsAccuracyUblox = 0.;
   int satelliteCount;
   bool gpsOK;
   

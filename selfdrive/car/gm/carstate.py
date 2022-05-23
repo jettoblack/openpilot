@@ -36,7 +36,8 @@ class CarState(CarStateBase):
       f.write(f"{self.car_fingerprint}\n")
     
     self.t = 0.
-    self.is_ev = (self.car_fingerprint == CAR.VOLT)
+    self.is_ev = (self.car_fingerprint in [CAR.VOLT, CAR.VOLT18])
+    self.do_sng = (self.car_fingerprint in [CAR.VOLT])
     
     self.prev_distance_button = 0
     self.prev_lka_button = 0
@@ -87,12 +88,12 @@ class CarState(CarStateBase):
     self.one_pedal_dl_engage_on_gas_enabled = self.is_ev and self._params.get_bool("OnePedalDLEngageOnGas") and (self.one_pedal_mode_enabled or not self.disengage_on_gas)
     self.one_pedal_dl_coasting_enabled = self.is_ev and self._params.get_bool("OnePedalDLCoasting") and (self.one_pedal_mode_enabled or not self.disengage_on_gas)
     self.one_pedal_mode_engage_on_gas = False
-    self.one_pedal_mode_engage_on_gas_min_speed = 1. * CV.MPH_TO_MS # gas press at or above this speed with engage on gas enabled and one-pedal mode will activate
+    self.one_pedal_mode_engage_on_gas_min_speed = 2.5 * CV.MPH_TO_MS # gas press at or above this speed with engage on gas enabled and one-pedal mode will activate
     self.one_pedal_mode_max_set_speed = 3 * CV.MPH_TO_MS #  one pedal mode activates if cruise set at or below this speed
     self.one_pedal_mode_stop_apply_brake_bp = [[i * CV.MPH_TO_MS for i in [1., 4., 45., 85.]], [i * CV.MPH_TO_MS for i in [1., 4., 45., 85.]], [1.]]
     self.one_pedal_mode_stop_apply_brake_v = [[80., 95., 115., 90.], [110., 165., 185., 140.], [280.]] # three levels. 1-2 are cycled using follow distance press, and 3 by holding
     self.one_pedal_mode_apply_brake = 0.
-    self.one_pedal_mode_ramp_duration = 0.6
+    self.one_pedal_mode_ramp_duration = 0.9
     self.one_pedal_mode_ramp_time_step = 60. / self.one_pedal_mode_ramp_duration
     self.one_pedal_mode_ramp_t_last = 0.
     self.one_pedal_mode_active_last = False
@@ -199,11 +200,12 @@ class CarState(CarStateBase):
     self.angle_steers = pt_cp.vl["PSCMSteeringAngle"]['SteeringWheelAngle']
       
     self.gear_shifter = self.parse_gear_shifter(self.shifter_values.get(pt_cp.vl["ECMPRDNL"]['PRNDL'], None))
-    ret.gearShifter = self.gear_shifter
-    ret.brakePressed = pt_cp.vl["ECMEngineStatus"]["Brake_Pressed"] != 0
+    ret.gearShifter = self.gear_shifter    
+    ret.brakePressed = pt_cp.vl["ECMEngineStatus"]["Brake_Pressed"] != 0 
+    ret.brakePressed = ret.brakePressed and pt_cp.vl["ECMAcceleratorPos"]["BrakePedalPos"] >= 8
     if ret.brakePressed:
-      self.user_brake = pt_cp.vl["EBCMBrakePedalPosition"]['BrakePedalPosition']
-      ret.brake = self.user_brake / 0xd0
+      self.user_brake = pt_cp.vl["ECMAcceleratorPos"]['BrakePedalPos']
+      ret.brake = pt_cp.vl["ECMAcceleratorPos"]["BrakePedalPos"] / 0xd0
     else:
       self.user_brake = 0.
       ret.brake = 0.
@@ -369,7 +371,6 @@ class CarState(CarStateBase):
     # this function generates lists for signal, messages and initial values
     signals = [
       # sig_name, sig_address, default
-      ("BrakePedalPosition", "EBCMBrakePedalPosition", 0),
       ("FrontLeftDoor", "BCMDoorBeltStatus", 0),
       ("FrontRightDoor", "BCMDoorBeltStatus", 0),
       ("RearLeftDoor", "BCMDoorBeltStatus", 0),
@@ -378,6 +379,8 @@ class CarState(CarStateBase):
       ("RightSeatBelt", "BCMDoorBeltStatus", 0),
       ("TurnSignals", "BCMTurnSignals", 0),
       ("AcceleratorPedal2", "AcceleratorPedal2", 0),
+      ("BrakePedalPos", "ECMAcceleratorPos", 0),
+      ("Brake_Pressed", "ECMEngineStatus", 0),
       ("CruiseState", "AcceleratorPedal2", 0),
       ("ACCButtons", "ASCMSteeringButton", CruiseButtons.UNPRESS),
       ("DriveModeButton", "ASCMSteeringButton", 0),
@@ -399,7 +402,6 @@ class CarState(CarStateBase):
       ("TractionControlOn", "ESPStatus", 0),
       ("EPBClosed", "EPBStatus", 0),
       ("CruiseMainOn", "ECMEngineStatus", 0),
-      ("Brake_Pressed", "ECMEngineStatus", 0),
     ]
 
     checks = [
@@ -411,16 +413,15 @@ class CarState(CarStateBase):
       ("EPBStatus", 20),
       ("EBCMWheelSpdFront", 20),
       ("EBCMWheelSpdRear", 20),
-      ("AcceleratorPedal", 33),
       ("AcceleratorPedal2", 33),
+      ("ECMAcceleratorPos", 100),
       ("ASCMSteeringButton", 33),
       ("ECMEngineStatus", 100),
       ("PSCMSteeringAngle", 100),
-      ("EBCMBrakePedalPosition", 100),
       ("ECMEngineCoolantTemp", 1),
     ]
 
-    if CP.carFingerprint == CAR.VOLT:
+    if CP.carFingerprint in [CAR.VOLT, CAR.VOLT18]:
       signals += [
         ("RegenPaddle", "EBCMRegenPaddle", 0),
         ("PRNDL2", "ECMPRDNL2", 0),

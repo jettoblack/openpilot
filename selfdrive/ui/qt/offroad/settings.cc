@@ -50,11 +50,6 @@ TogglesPanel::TogglesPanel(QWidget *parent) : QWidget(parent) {
                                   "Display speed in km/h instead of mp/h.",
                                   "../assets/offroad/icon_metric.png",
                                   this));
-  toggles.append(new ParamControl("CommunityFeaturesToggle",
-                                  "Enable Community Features",
-                                  "Use features from the open source community that are not maintained or supported by comma.ai and have not been confirmed to meet the standard safety model. These features include community supported cars and community supported hardware. Be extra cautious when using these features",
-                                  "../assets/offroad/icon_shell.png",
-                                  this));
 
   toggles.append(new ParamControl("UploadRaw",
                                   "Upload Raw Logs",
@@ -80,17 +75,23 @@ TogglesPanel::TogglesPanel(QWidget *parent) : QWidget(parent) {
                                   "../assets/offroad/icon_road.png",
                                   this));
   
+  toggles.append(new ParamControl("EnableTorqueControl",
+                                  "Enable \"torque\" steering control",
+                                  "(Restart car to take effect) Use the newer torque-based steering control that steers by achieving a target amount of lateral acceleration rather than achieving a target steering angle. Torque tune is only available in the Volt.",
+                                  "../assets/offroad/icon_openpilot.png",
+                                  this));
+  
   toggles.append(new ParamControl("HandsOnWheelMonitoring",
                                   "Enable Hands on Wheel Monitoring",
                                   "Monitor and alert when driver is not keeping the hands on the steering wheel.",
                                   "../assets/offroad/icon_hands_on_wheel.png",
                                   this));
-  toggles.append(new ParamControl("TurnVisionControl",
+  toggles.append(new ParamControl("TurnVisionControlEnabled",
                                   "Enable vision based turn control",
                                   "Use vision path predictions to estimate the appropiate speed to drive through turns ahead.",
                                   "../assets/offroad/icon_slow_curves_vision.png",
                                   this));
-  toggles.append(new ParamControl("TurnSpeedControl",
+  toggles.append(new ParamControl("TurnSpeedControlEnabled",
                                   "Enable Map Data Turn Control",
                                   "Use curvature info from map data to define speed limits to take turns ahead",
                                   "../assets/offroad/icon_slow_curves_map.png",
@@ -224,6 +225,11 @@ TogglesPanel::TogglesPanel(QWidget *parent) : QWidget(parent) {
                                   "Lower device overhead",
                                   "Decreases device power, CPU, and storage use for running better on older hardware by: 1) defaulting to medium brightness (tap DM icon to change), 2) disable onroad logging (loggerd and proclogd). Your device will not keep or upload logs with this enabled!",
                                   "../assets/offroad/icon_settings.png",
+                                  this));
+  toggles.append(new ParamControl("ColorPath",
+                                  "Colored path",
+                                  "Color path according to the amount of lateral (steering) correction being applied",
+                                  "../assets/offroad/icon_road.png",
                                   this));
   toggles.append(new ParamControl("ShowDebugUI",
                                   "Show debug UI elements",

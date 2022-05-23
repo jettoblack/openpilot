@@ -11,30 +11,30 @@ from selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
 
 _MIN_V = 5.6  # Do not operate under 20km/h
 
-_ENTERING_PRED_LAT_ACC_TH = 1.3  # Predicted Lat Acc threshold to trigger entering turn state.
-_ABORT_ENTERING_PRED_LAT_ACC_TH = 1.1  # Predicted Lat Acc threshold to abort entering state if speed drops.
+_ENTERING_PRED_LAT_ACC_TH = 1.6  # Predicted Lat Acc threshold to trigger entering turn state.
+_ABORT_ENTERING_PRED_LAT_ACC_TH = 1.5  # Predicted Lat Acc threshold to abort entering state if speed drops.
 
-_TURNING_LAT_ACC_TH = 2.4  # Lat Acc threshold to trigger turning turn state.
+_TURNING_LAT_ACC_TH = 1.6  # Lat Acc threshold to trigger turning turn state.
 
 _LEAVING_LAT_ACC_TH = 1.3  # Lat Acc threshold to trigger leaving turn state.
 _FINISH_LAT_ACC_TH = 1.1  # Lat Acc threshold to trigger end of turn cycle.
 
 _EVAL_STEP = 5.  # mts. Resolution of the curvature evaluation.
-_EVAL_START = 20.  # mts. Distance ahead where to start evaluating vision curvature.
+_EVAL_START = 10.  # mts. Distance ahead where to start evaluating vision curvature.
 _EVAL_LENGHT = 150.  # mts. Distance ahead where to stop evaluating vision curvature.
 _EVAL_RANGE = np.arange(_EVAL_START, _EVAL_LENGHT, _EVAL_STEP)
 
-_A_LAT_REG_MAX = 3.7  # Maximum lateral acceleration
+_A_LAT_REG_MAX = 3.3  # Maximum lateral acceleration
 
 # Lookup table for the minimum smooth deceleration during the ENTERING state
 # depending on the actual maximum absolute lateral acceleration predicted on the turn ahead.
-_ENTERING_SMOOTH_DECEL_V = [-0.1, -1.]  # min decel value allowed on ENTERING state
-_ENTERING_SMOOTH_DECEL_BP = [2.2, 3.7]  # absolute value of lat acc ahead
+_ENTERING_SMOOTH_DECEL_V = [-0.05, -1.0]  # min decel value allowed on ENTERING state
+_ENTERING_SMOOTH_DECEL_BP = [2.0, 3.8]  # absolute value of lat acc ahead
 
 # Lookup table for the acceleration for the TURNING state
 # depending on the current lateral acceleration of the vehicle.
-_TURNING_ACC_V = [1.0, 0., -1.0]  # acc value
-_TURNING_ACC_BP = [1.2, 2.5, 3.9]  # absolute value of current lat acc
+_TURNING_ACC_V = [1.0, -0.05, -1.]  # acc value
+_TURNING_ACC_BP = [1.0, 2.0, 3.8]  # absolute value of current lat acc
 
 _LEAVING_ACC = 0.6  # Confortble acceleration to regain speed while leaving a turn.
 
@@ -42,8 +42,8 @@ _MIN_LANE_PROB = 0.6  # Minimum lanes probability to allow curvature prediction 
 
 # scale velocity used to determine curvature in order to provide more braking at low speed
 # where the LKA torque is less capable despite low lateral acceleration.
-_LOW_SPEED_SCALE_V = [1.1, 1.0] #increase the first value to increase low-speed vision braking; don't touch the second
-_LOW_SPEED_SCALE_BP = [i * CV.MPH_TO_MS for i in [0., 40.]]
+_LOW_SPEED_SCALE_V = [1.5, 1.0] #increase the first value to increase low-speed vision braking; don't touch the second
+_LOW_SPEED_SCALE_BP = [i * CV.MPH_TO_MS for i in [0., 30.]]
 
 _DEBUG = False
 
@@ -153,6 +153,9 @@ class VisionTurnController():
     path_poly = None
     model_data = sm['modelV2'] if sm.valid.get('modelV2', False) else None
     lat_planner_data = sm['lateralPlan'] if sm.valid.get('lateralPlan', False) else None
+    
+    # scale velocity used to determine curvature in order to provide more braking at low speed
+    vf = interp(self._v_ego, _LOW_SPEED_SCALE_BP, _LOW_SPEED_SCALE_V)
 
     # 1. When the probability of lanes is good enough, compute polynomial from lanes as they are way more stable
     # on current mode than drving path.
@@ -199,23 +202,20 @@ class VisionTurnController():
     current_curvature = abs(
       sm['carState'].steeringAngleDeg * CV.DEG_TO_RAD / (self._CP.steerRatio * self._CP.wheelbase))
 
-    self._current_lat_acc = current_curvature * self._v_ego**2
+    self._current_lat_acc = current_curvature * (vf * self._v_ego)**2
     self._max_v_for_current_curvature = math.sqrt(_A_LAT_REG_MAX / current_curvature) if current_curvature > 0 \
       else V_CRUISE_MAX * CV.KPH_TO_MS
     
-    # scale velocity used to determine curvature in order to provide more braking at low speed
-    vf = interp(self._v_ego, _LOW_SPEED_SCALE_BP, _LOW_SPEED_SCALE_V)
-    
     pred_curvatures = eval_curvature(path_poly, _EVAL_RANGE)
     max_pred_curvature = np.amax(pred_curvatures)
-    self._max_pred_lat_acc = (self._v_ego*vf)**2 * max_pred_curvature
+    self._max_pred_lat_acc = (vf * self._v_ego)**2 * max_pred_curvature
 
-    max_curvature_for_vego = _A_LAT_REG_MAX / max(self._v_ego*vf, 0.1)**2
+    max_curvature_for_vego = _A_LAT_REG_MAX / max(vf * self._v_ego, 0.1)**2
     lat_acc_overshoot_idxs = np.nonzero(pred_curvatures >= max_curvature_for_vego)[0]
     self._lat_acc_overshoot_ahead = len(lat_acc_overshoot_idxs) > 0
 
     if self._lat_acc_overshoot_ahead:
-      self._v_overshoot = min(math.sqrt(_A_LAT_REG_MAX / max_pred_curvature), self._v_cruise_setpoint*vf)
+      self._v_overshoot = min(math.sqrt(_A_LAT_REG_MAX / max_pred_curvature), self._v_cruise_setpoint)
       self._v_overshoot_distance = max(lat_acc_overshoot_idxs[0] * _EVAL_STEP + _EVAL_START, _EVAL_STEP)
       _debug(f'TVC: High LatAcc. Dist: {self._v_overshoot_distance:.2f}, v: {self._v_overshoot * CV.MS_TO_KPH:.2f}')
 
