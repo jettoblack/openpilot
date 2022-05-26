@@ -215,7 +215,7 @@ class CarInterface(CarInterfaceBase):
       ret.longitudinalTuning.kiBP = [5., 20., 35.]
       ret.longitudinalTuning.kiV = [0.18, 0.31, 0.34]
       ret.longitudinalTuning.kdBP = [5., 25.]
-      ret.longitudinalTuning.kdV = [0.6, 0.4]
+      ret.longitudinalTuning.kdV = [0.6, 0.2]
 
     elif candidate == CAR.BUICK_REGAL:
       ret.minEnableSpeed = 18 * CV.MPH_TO_MS
