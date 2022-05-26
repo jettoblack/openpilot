@@ -209,13 +209,13 @@ class CarInterface(CarInterfaceBase):
         ret.lateralTuning.pid.kdBP = [0.]
         ret.lateralTuning.pid.kdV = [0.6]
         ret.lateralTuning.pid.kf = 1. # get_steer_feedforward_acadia()
-
+      
       ret.longitudinalTuning.kpBP = [5., 20., 35.]
-      ret.longitudinalTuning.kpV = [1.25, 1.4, 1.3]
+      ret.longitudinalTuning.kpV = [1.25, 1.6, 1.3]
       ret.longitudinalTuning.kiBP = [5., 20., 35.]
-      ret.longitudinalTuning.kiV = [0.18, 0.25, 0.30]
+      ret.longitudinalTuning.kiV = [0.18, 0.31, 0.34]
       ret.longitudinalTuning.kdBP = [5., 25.]
-      ret.longitudinalTuning.kdV = [0.6, 0.0]
+      ret.longitudinalTuning.kdV = [0.6, 0.4]
 
     elif candidate == CAR.BUICK_REGAL:
       ret.minEnableSpeed = 18 * CV.MPH_TO_MS
