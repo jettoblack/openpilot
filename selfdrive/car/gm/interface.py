@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from math import fabs, sin
+from math import fabs, sin, erf, atan
 from cereal import car
 from common.numpy_fast import interp
 from common.realtime import sec_since_boot
@@ -23,7 +23,7 @@ _A_MIN_V_STOCK_FACTOR_V = [0., 1.]
 
 # increase/decrease max accel based on vehicle pitch
 INCLINE_ACCEL_SCALE_BP = [i * CV.MPH_TO_MS for i in [25., 75]] # [mph] lookup speeds for additional offset
-INCLINE_ACCEL_SCALE_V = [1.5, 1.4] # [m/s^2] additional scale factor to change how incline affects accel based on speed
+INCLINE_ACCEL_SCALE_V = [1.5, 1.45] # [m/s^2] additional scale factor to change how incline affects accel based on speed
 INCLINE_ACCEL_MAX_SPORT_FACTOR = 0.9 # acceleration will never be increased to more than this factor of the "sport" acceleration at the current speed
 DECLINE_ACCEL_FACTOR = 0.5 # this factor of g accel is used to lower max accel limit so you don't floor it downhill
 DECLINE_ACCEL_MIN = 0.2 # [m/s^2] don't decrease acceleration limit due to decline below this total value
@@ -31,10 +31,24 @@ DECLINE_ACCEL_MIN = 0.2 # [m/s^2] don't decrease acceleration limit due to decli
 ButtonType = car.CarState.ButtonEvent.Type
 EventName = car.CarEvent.EventName
 
+# meant for traditional ff fits
 def get_steer_feedforward_sigmoid(desired_angle, v_ego, ANGLE, ANGLE_OFFSET, SIGMOID_SPEED, SIGMOID, SPEED):
   x = ANGLE * (desired_angle + ANGLE_OFFSET)
   sigmoid = x / (1 + fabs(x))
   return (SIGMOID_SPEED * sigmoid * v_ego) + (SIGMOID * sigmoid) + (SPEED * v_ego)
+
+# meant for traditional ff fits
+def get_steer_feedforward_sigmoid1(angle, speed, ANGLE_COEF, ANGLE_COEF2, ANGLE_OFFSET, SPEED_OFFSET, SIGMOID_COEF_RIGHT, SIGMOID_COEF_LEFT, SPEED_COEF):
+  x = ANGLE_COEF * (angle) / max(0.01,speed)
+  sigmoid = x / (1. + fabs(x))
+  return ((SIGMOID_COEF_RIGHT if angle > 0. else SIGMOID_COEF_LEFT) * sigmoid) * (0.01 + speed + SPEED_OFFSET) ** ANGLE_COEF2 + ANGLE_OFFSET * (angle * 0.05 - atan(angle * 0.05))
+
+# meant for torque fits
+def get_steer_feedforward_erf(angle, speed, ANGLE_COEF, ANGLE_COEF2, ANGLE_OFFSET, SPEED_OFFSET, SIGMOID_COEF_RIGHT, SIGMOID_COEF_LEFT, SPEED_COEF):
+  x = ANGLE_COEF * (angle) * (40.23 / (max(0.05,speed + SPEED_OFFSET))**SPEED_COEF)
+  sigmoid = erf(x)
+  return ((SIGMOID_COEF_RIGHT if angle < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * angle
+
 
 class CarInterface(CarInterfaceBase):
   params_check_last_t = 0.
@@ -66,12 +80,28 @@ class CarInterface(CarInterfaceBase):
   # Volt determined by iteratively plotting and minimizing error for f(angle, speed) = steer.
   @staticmethod
   def get_steer_feedforward_volt(desired_angle, v_ego):
-    ANGLE = 0.03093722278106523
-    ANGLE_OFFSET = 0.#46341000035928637
-    SIGMOID_SPEED = 0.07928458395144745
-    SIGMOID = 0.4983180128530419
-    SPEED = -0.0024896011696167266
-    return get_steer_feedforward_sigmoid(desired_angle, v_ego, ANGLE, ANGLE_OFFSET, SIGMOID_SPEED, SIGMOID, SPEED)
+    ANGLE_COEF = 0.90933154
+    ANGLE_COEF2 = 1.99999999
+    ANGLE_OFFSET = 0.12278091
+    SPEED_OFFSET = 8.14335061
+    SIGMOID_COEF_RIGHT = 0.00219725
+    SIGMOID_COEF_LEFT = 0.00202376
+    SPEED_COEF = 0.
+    return get_steer_feedforward_sigmoid1(desired_angle, v_ego, ANGLE_COEF, ANGLE_COEF2, ANGLE_OFFSET, SPEED_OFFSET, SIGMOID_COEF_RIGHT, SIGMOID_COEF_LEFT, SPEED_COEF)
+  
+  # Volt determined by iteratively plotting and minimizing error for f(angle, speed) = steer.
+  @staticmethod
+  def get_steer_feedforward_volt_torque(desired_lateral_accel, v_ego):
+    ANGLE_COEF = 0.09096546
+    ANGLE_COEF2 = 0.12402084
+    ANGLE_OFFSET = 0.
+    SPEED_OFFSET = -3.35899817
+    SIGMOID_COEF_RIGHT = 0.48819415
+    SIGMOID_COEF_LEFT = 0.55110842
+    SPEED_COEF = 0.57397696
+    return get_steer_feedforward_erf(desired_lateral_accel, v_ego, ANGLE_COEF, ANGLE_COEF2, ANGLE_OFFSET, SPEED_OFFSET, SIGMOID_COEF_RIGHT, SIGMOID_COEF_LEFT, SPEED_COEF)
+  
+
 
   @staticmethod
   def get_steer_feedforward_acadia(desired_angle, v_ego):
@@ -84,11 +114,20 @@ class CarInterface(CarInterfaceBase):
 
   def get_steer_feedforward_function(self):
     if self.CP.carFingerprint in [CAR.VOLT, CAR.VOLT18]:
-      return self.get_steer_feedforward_volt
+      if (Params().get_bool("EnableTorqueControl")):
+        return self.get_steer_feedforward_volt_torque
+      else:
+        return self.get_steer_feedforward_volt
     elif self.CP.carFingerprint == CAR.ACADIA:
       return self.get_steer_feedforward_acadia
     else:
       return CarInterfaceBase.get_steer_feedforward_default
+  
+  def get_steer_feedforward_function_torque(self):
+    if self.CP.carFingerprint in [CAR.VOLT, CAR.VOLT18]:
+      return self.get_steer_feedforward_volt_torque
+    else:
+      return CarInterfaceBase.get_steer_feedforward_torque_default
 
   @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=None):
@@ -139,21 +178,21 @@ class CarInterface(CarInterfaceBase):
       ret.centerToFront = 0.45 * ret.wheelbase # from Volt Gen 1
       ret.steerActuatorDelay = 0.18
       if (Params().get_bool("EnableTorqueControl")):
-        max_torque = 3.0
+        max_lateral_accel = 3.0
         ret.lateralTuning.init('torque')
         ret.lateralTuning.torque.useSteeringAngle = True
-        ret.lateralTuning.torque.kp = 2.0 / max_torque
-        ret.lateralTuning.torque.ki = 0.4 / max_torque
-        ret.lateralTuning.torque.kd = 3.0 / max_torque
-        ret.lateralTuning.torque.kf = 1.4 / max_torque
-        ret.lateralTuning.torque.friction = 0.02
+        ret.lateralTuning.torque.kp = 1.8 / max_lateral_accel
+        ret.lateralTuning.torque.ki = 0.6 / max_lateral_accel
+        ret.lateralTuning.torque.kd = 4.0 / max_lateral_accel
+        ret.lateralTuning.torque.kf = 1.0 # use with custom torque ff
+        ret.lateralTuning.torque.friction = 0.005
       else:
         ret.lateralTuning.pid.kpBP = [0., 40.]
         ret.lateralTuning.pid.kpV = [0., .16]
         ret.lateralTuning.pid.kiBP = [0., 40.]
-        ret.lateralTuning.pid.kiV = [.015, .025]
+        ret.lateralTuning.pid.kiV = [.015, 0.02]
         ret.lateralTuning.pid.kdBP = [0.]
-        ret.lateralTuning.pid.kdV = [2.5]
+        ret.lateralTuning.pid.kdV = [0.6]
         ret.lateralTuning.pid.kf = 1. # !!! ONLY for sigmoid feedforward !!!
       
 
@@ -193,13 +232,13 @@ class CarInterface(CarInterfaceBase):
       ret.steerActuatorDelay = 0.24
 
       if (Params().get_bool("EnableTorqueControl")):
-        max_torque = 3.0
+        max_lateral_accel = 3.0
         ret.lateralTuning.init('torque')
         ret.lateralTuning.torque.useSteeringAngle = True
-        ret.lateralTuning.torque.kp = 2.0 / max_torque
-        ret.lateralTuning.torque.ki = 0.8 / max_torque
-        ret.lateralTuning.torque.kd = 5.0 / max_torque
-        ret.lateralTuning.torque.kf = 1.5 / max_torque
+        ret.lateralTuning.torque.kp = 2.0 / max_lateral_accel
+        ret.lateralTuning.torque.ki = 0.8 / max_lateral_accel
+        ret.lateralTuning.torque.kd = 5.0 / max_lateral_accel
+        ret.lateralTuning.torque.kf = 1.5 / max_lateral_accel
         ret.lateralTuning.torque.friction = 0.05
       else:
         ret.lateralTuning.pid.kpBP = [i * CV.MPH_TO_MS for i in [0., 80.]]
@@ -297,10 +336,17 @@ class CarInterface(CarInterfaceBase):
       if but == CruiseButtons.RES_ACCEL:
         if not (ret.cruiseState.enabled and ret.standstill):
           be.type = ButtonType.accelCruise  # Suppress resume button if we're resuming from stop so we don't adjust speed.
+        if self.CS.one_pedal_mode_active or self.CS.coast_one_pedal_mode_active \
+          or ret.standstill or not ret.cruiseState.enabled:
+          self.CS.resume_button_pressed = True
+          self.CS.resume_required = False
       elif but == CruiseButtons.DECEL_SET:
         if not cruiseEnabled and not self.CS.lkMode:
           self.lkMode = True
         be.type = ButtonType.decelCruise
+        if self.CS.one_pedal_mode_active or self.CS.coast_one_pedal_mode_active \
+          or not ret.cruiseState.enabled:
+          self.CS.resume_button_pressed = True
       elif but == CruiseButtons.CANCEL:
         be.type = ButtonType.cancel
       elif but == CruiseButtons.MAIN:
@@ -413,7 +459,7 @@ class CarInterface(CarInterfaceBase):
         events.add(car.CarEvent.EventName.blinkerSteeringPaused)
         steer_paused = True
     if ret.vEgo < self.CP.minSteerSpeed:
-      if ret.standstill and cruiseEnabled and not ret.brakePressed and not self.CS.pause_long_on_gas_press and not self.CS.autoHoldActivated and not self.CS.disengage_on_gas and t - self.CS.sessionInitTime > 10.:
+      if ret.standstill and cruiseEnabled and not ret.brakePressed and not self.CS.pause_long_on_gas_press and not self.CS.autoHoldActivated and not self.CS.disengage_on_gas and t - self.CS.sessionInitTime > 10. and not self.CS.resume_required:
         events.add(car.CarEvent.EventName.stoppedWaitForGas)
       elif not steer_paused and self.CS.lkMode:
         events.add(car.CarEvent.EventName.belowSteerSpeed)
@@ -422,6 +468,8 @@ class CarInterface(CarInterfaceBase):
       events.add(car.CarEvent.EventName.autoHoldActivated)
     if self.CS.pcm_acc_status == AccState.FAULTED and t - self.CS.sessionInitTime > 10.0 and t - self.CS.lastAutoHoldTime > 1.0:
       events.add(EventName.accFaulted)
+    if self.CS.resume_required:
+      events.add(EventName.resumeRequired)
 
     # handle button presses
     for b in ret.buttonEvents:
@@ -466,6 +514,11 @@ class CarInterface(CarInterfaceBase):
     self.CS.pause_long_on_gas_press = pause_long_on_gas_press
     enabled = c.enabled or self.CS.pause_long_on_gas_press
 
+    if self.CS.resume_button_pressed \
+      and not self.CS.one_pedal_mode_active and not self.CS.coast_one_pedal_mode_active \
+      and (self.CS.one_pedal_mode_active_last or self.CS.coast_one_pedal_mode_active_last):
+        hud_v_cruise = max(self.CS.one_pedal_v_cruise_kph_last, hud_v_cruise)
+    
     can_sends = self.CC.update(enabled, self.CS, self.frame,
                                c.actuators,
                                hud_v_cruise, c.hudControl.lanesVisible,

@@ -202,6 +202,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"PandaHeartbeatLost", CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_OFF},
     {"Passive", PERSISTENT},
     {"PrimeRedirected", PERSISTENT},
+    {"PrintLeadInfo", PERSISTENT},
     {"RecordFront", PERSISTENT},
     {"RecordFrontLock", PERSISTENT},  // for the internal fleet
     {"ReleaseNotes", PERSISTENT},
@@ -217,8 +218,6 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"TrainingVersion", PERSISTENT},
     {"TurnSpeedControl", PERSISTENT},
     {"TurnVisionControl", PERSISTENT},
-    {"TurnSpeedControlEnabled", PERSISTENT},
-    {"TurnVisionControlEnabled", PERSISTENT},
     {"GMAutoHold", PERSISTENT},
     {"AccelModeButton", PERSISTENT},
     {"AccelMode", PERSISTENT},
