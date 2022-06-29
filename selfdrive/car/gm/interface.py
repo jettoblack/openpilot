@@ -343,12 +343,12 @@ class CarInterface(CarInterfaceBase):
         be.pressed = False
         but = self.CS.prev_cruise_buttons
       if but == CruiseButtons.RES_ACCEL:
+        self.CS.resume_required = False
         if not (ret.cruiseState.enabled and ret.standstill):
           be.type = ButtonType.accelCruise  # Suppress resume button if we're resuming from stop so we don't adjust speed.
         if self.CS.one_pedal_mode_active or self.CS.coast_one_pedal_mode_active \
           or ret.standstill or not ret.cruiseState.enabled:
           self.CS.resume_button_pressed = True
-          self.CS.resume_required = False
       elif but == CruiseButtons.DECEL_SET:
         if not cruiseEnabled and not self.CS.lkMode:
           self.lkMode = True
@@ -470,7 +470,7 @@ class CarInterface(CarInterfaceBase):
     if ret.vEgo < self.CP.minSteerSpeed:
       if ret.standstill and cruiseEnabled and not ret.brakePressed and not self.CS.pause_long_on_gas_press and not self.CS.autoHoldActivated and not self.CS.disengage_on_gas and t - self.CS.sessionInitTime > 10. and not self.CS.resume_required:
         events.add(car.CarEvent.EventName.stoppedWaitForGas)
-      elif not steer_paused and self.CS.lkMode:
+      elif not steer_paused and self.CS.lkMode and not self.CS.resume_required:
         events.add(car.CarEvent.EventName.belowSteerSpeed)
     if self.CS.autoHoldActivated:
       self.CS.lastAutoHoldTime = t
