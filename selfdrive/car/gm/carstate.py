@@ -125,6 +125,7 @@ class CarState(CarStateBase):
     self.pitch_raw = 0.
     self.pitch_ema = 1/200
     self.pitch_accel_factor = 0.8
+    self.pitch_accel_deadzone = 0.02 # radians ~ ±2% grade
     
     # similar to over-speed coast braking, lockout coast/one-pedal logic first for engine/regen braking, and then for actual brakes.
     # gas lockout lookup tables:
