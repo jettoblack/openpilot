@@ -251,11 +251,11 @@ class CarInterface(CarInterfaceBase):
         ret.lateralTuning.torque.friction = 0.01
       else:
         ret.lateralTuning.pid.kpBP = [i * CV.MPH_TO_MS for i in [0., 80.]]
-        ret.lateralTuning.pid.kpV = [0., 0.16]
+        ret.lateralTuning.pid.kpV = [0., 0.2]
         ret.lateralTuning.pid.kiBP = [0., 35.]
-        ret.lateralTuning.pid.kiV = [0.01, 0.016]
+        ret.lateralTuning.pid.kiV = [0.012, 0.018]
         ret.lateralTuning.pid.kdBP = [0.]
-        ret.lateralTuning.pid.kdV = [0.7]
+        ret.lateralTuning.pid.kdV = [1.0]
         ret.lateralTuning.pid.kf = 1. # get_steer_feedforward_acadia()
       
       ret.longitudinalTuning.kpBP = [5., 20., 35.]
