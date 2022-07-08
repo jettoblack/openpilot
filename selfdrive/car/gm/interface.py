@@ -241,7 +241,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerActuatorDelay = 0.24
 
       if (Params().get_bool("EnableTorqueControl")):
-        max_lateral_accel = 3.0
+        max_lateral_accel = 2.7
         ret.lateralTuning.init('torque')
         ret.lateralTuning.torque.useSteeringAngle = True
         ret.lateralTuning.torque.kp = 2.0 / max_lateral_accel
