@@ -256,6 +256,11 @@ class CarController():
       elif CS.out.brake > 0.:
         CS.apply_brake_percent = interp(CS.out.brake, [0., 0.5], [51., 100.])
     
+    send_fcw = hud_alert == VisualAlert.fcw
+    if send_fcw:
+      apply_gas = P.GAS_LOOKUP_V[0]
+      apply_brake = 300
+      
     # Gas/regen and brakes - all at 25Hz
     if (frame % 4) == 0:
       idx = (frame // 4) % 4
@@ -300,7 +305,6 @@ class CarController():
 
     # Send dashboard UI commands (ACC status), 25hz
     if (frame % 4) == 0:
-      send_fcw = hud_alert == VisualAlert.fcw
       follow_level = CS.get_follow_level()
 
       can_sends.append(gmcan.create_acc_dashboard_command(self.packer_pt, CanBus.POWERTRAIN, enabled, 
