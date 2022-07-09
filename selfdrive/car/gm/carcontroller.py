@@ -272,6 +272,8 @@ class CarController():
 
         at_full_stop = standstill and car_stopping
         near_stop = (CS.out.vEgo < P.NEAR_STOP_BRAKE_PHASE) and car_stopping
+        if at_full_stop:
+          apply_brake = min(apply_brake + 50, P.BRAKE_LOOKUP_V[0])
         can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, CanBus.CHASSIS, apply_brake, idx, near_stop, at_full_stop))
         CS.autoHoldActivated = True
 
@@ -286,6 +288,9 @@ class CarController():
           standstill = CS.pcm_acc_status == AccState.STANDSTILL
           at_full_stop = enabled and standstill and car_stopping
           near_stop = enabled and (CS.out.vEgo < P.NEAR_STOP_BRAKE_PHASE) and car_stopping
+        
+        if at_full_stop:
+          apply_brake = min(apply_brake + 50, P.BRAKE_LOOKUP_V[0])
 
         can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, CanBus.CHASSIS, apply_brake, idx, near_stop, at_full_stop))
         CS.autoHoldActivated = False
