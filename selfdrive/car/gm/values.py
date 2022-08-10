@@ -33,12 +33,12 @@ class CarControllerParams():
     # to apply some more braking if we're on a downhill slope.
     # Our controller should still keep the 2 second average above
     # -3.5 m/s^2 as per planner limits
-    self.ACCEL_MIN = -3.5 # m/s^2
+    self.ACCEL_MIN = -4 # m/s^2
 
     self.MAX_ACC_REGEN = 1404  # ACC Regen braking is slightly less powerful than max regen paddle
     self.GAS_LOOKUP_BP = [-0.2, 0., self.ACCEL_MAX]
     self.GAS_LOOKUP_V = [self.MAX_ACC_REGEN, self.ZERO_GAS, self.MAX_GAS]
-    self.BRAKE_LOOKUP_BP = [self.ACCEL_MIN, -0.2]
+    self.BRAKE_LOOKUP_BP = [self.ACCEL_MIN, -0.1]
     self.BRAKE_LOOKUP_V = [MAX_BRAKE, 0]
 
 class CAR:
