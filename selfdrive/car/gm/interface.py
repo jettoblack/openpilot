@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 from cereal import car
-from math import fabs
+from math import fabs, erf
 from panda import Panda
 
 from common.conversions import Conversions as CV
 from selfdrive.car import STD_CARGO_KG, create_button_event, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
 from selfdrive.car.gm.values import CAR, CruiseButtons, CarControllerParams, EV_CAR, CAMERA_ACC_CAR
-from selfdrive.car.interfaces import CarInterfaceBase
+from selfdrive.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType
 
 ButtonType = car.CarState.ButtonEvent.Type
 EventName = car.CarEvent.EventName
@@ -22,13 +22,6 @@ class CarInterface(CarInterfaceBase):
   def get_pid_accel_limits(CP, current_speed, cruise_speed):
     return CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX
 
-  # Determined by iteratively plotting and minimizing error for f(angle, speed) = steer.
-  @staticmethod
-  def get_steer_feedforward_volt(desired_angle, v_ego):
-    desired_angle *= 0.02904609
-    sigmoid = desired_angle / (1 + fabs(desired_angle))
-    return 0.10006696 * sigmoid * (v_ego + 3.12485927)
-
   @staticmethod
   def get_steer_feedforward_acadia(desired_angle, v_ego):
     desired_angle *= 0.09760208
@@ -36,12 +29,29 @@ class CarInterface(CarInterfaceBase):
     return 0.04689655 * sigmoid * (v_ego + 10.028217)
 
   def get_steer_feedforward_function(self):
-    if self.CP.carFingerprint == CAR.VOLT:
-      return self.get_steer_feedforward_volt
-    elif self.CP.carFingerprint == CAR.ACADIA:
+    if self.CP.carFingerprint == CAR.ACADIA:
       return self.get_steer_feedforward_acadia
     else:
       return CarInterfaceBase.get_steer_feedforward_default
+    
+  @staticmethod
+  def torque_from_lateral_accel_volt(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel):
+    ANGLE_COEF = 0.08617848
+    ANGLE_COEF2 = 0.16
+    SPEED_OFFSET = -3.48009247
+    SIGMOID_COEF_RIGHT = 0.56664089
+    SIGMOID_COEF_LEFT = 0.50360594
+    SPEED_COEF = 0.55322718
+    x = ANGLE_COEF * (lateral_accel_value) * (40.23 / (max(0.05,v_ego + SPEED_OFFSET))**SPEED_COEF)
+    sigmoid = erf(x)
+    out = ((SIGMOID_COEF_RIGHT if lateral_accel_value < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * lateral_accel_value
+    return out + g_lat_accel * 0.4
+  
+  def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
+    if self.CP.carFingerprint == CAR.VOLT:
+      return self.torque_from_lateral_accel_volt
+    else:
+      return CarInterfaceBase.torque_from_lateral_accel_linear
 
   @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=None, experimental_long=False):
@@ -102,7 +112,7 @@ class CarInterface(CarInterfaceBase):
 
     # Start with a baseline tuning for all GM vehicles. Override tuning as needed in each model section below.
     # Some GMs need some tolerance above 10 kph to avoid a fault
-    ret.minSteerSpeed = 10.1 * CV.KPH_TO_MS
+    ret.minSteerSpeed = 7 * CV.MPH_TO_MS
     ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
     ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.2], [0.00]]
     ret.lateralTuning.pid.kf = 0.00004   # full torque for 20 deg at 80mph means 0.00007818594
@@ -113,18 +123,26 @@ class CarInterface(CarInterfaceBase):
     ret.radarTimeStep = 0.0667  # GM radar runs at 15Hz instead of standard 20Hz
 
     if candidate == CAR.VOLT:
+      ret.minEnableSpeed = -1
       ret.mass = 1607. + STD_CARGO_KG
       ret.wheelbase = 2.69
       ret.steerRatio = 17.7  # Stock 15.7, LiveParameters
       tire_stiffness_factor = 0.469  # Stock Michelin Energy Saver A/S, LiveParameters
       ret.centerToFront = ret.wheelbase * 0.45  # Volt Gen 1, TODO corner weigh
 
-      ret.lateralTuning.pid.kpBP = [0., 40.]
-      ret.lateralTuning.pid.kpV = [0., 0.17]
-      ret.lateralTuning.pid.kiBP = [0.]
-      ret.lateralTuning.pid.kiV = [0.]
-      ret.lateralTuning.pid.kf = 1.  # get_steer_feedforward_volt()
+      CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
+      ret.lateralTuning.torque.kf = 1.0 # use with custom torque ff
       ret.steerActuatorDelay = 0.2
+      
+      ret.longitudinalTuning.kpBP = [5., 15., 35.]
+      ret.longitudinalTuning.kpV = [0.8, .9, 0.8]
+      ret.longitudinalTuning.kiBP = [5., 15., 35.]
+      ret.longitudinalTuning.kiV = [0.08, 0.13, 0.13]
+      ret.longitudinalTuning.kdBP = [5., 25.]
+      ret.longitudinalTuning.kdV = [0.3, 0.0]
+      ret.stoppingDecelRate = 0.2 # brake_travel/s while trying to stop
+      ret.longitudinalActuatorDelayLowerBound = 0.41
+      ret.longitudinalActuatorDelayUpperBound = 0.41
 
     elif candidate == CAR.MALIBU:
       ret.mass = 1496. + STD_CARGO_KG
