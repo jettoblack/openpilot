@@ -132,7 +132,7 @@ class CarState(CarStateBase):
     ret.espDisabled = pt_cp.vl["ESPStatus"]["TractionControlOn"] != 1
     ret.accFaulted = pt_cp.vl["AcceleratorPedal2"]["CruiseState"] == AccState.FAULTED
     self.pcm_acc_status = pt_cp.vl["AcceleratorPedal2"]["CruiseState"]
-    ret.brakeLights = bool(self.visual_brake_lights and ret.brakePressed and ret.parkingBrake)
+    ret.brakeLights = bool(ret.brakePressed or ret.parkingBrake)
 
     ret.cruiseState.enabled = pt_cp.vl["AcceleratorPedal2"]["CruiseState"] != AccState.OFF
     ret.cruiseState.standstill = pt_cp.vl["AcceleratorPedal2"]["CruiseState"] == AccState.STANDSTILL
