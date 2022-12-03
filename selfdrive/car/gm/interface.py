@@ -44,7 +44,44 @@ class CarInterface(CarInterfaceBase):
     SIGMOID_COEF_RIGHT = 0.56664089
     SIGMOID_COEF_LEFT = 0.50360594
     SPEED_COEF = 0.55322718
-    x = ANGLE_COEF * (lateral_accel_value) * (40.23 / (max(0.05,v_ego + SPEED_OFFSET))**SPEED_COEF)
+    x = ANGLE_COEF * (lateral_accel_value) * (40.23 / (max(0.2,v_ego + SPEED_OFFSET))**SPEED_COEF)
+    sigmoid = erf(x)
+    out = ((SIGMOID_COEF_RIGHT if lateral_accel_value < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * lateral_accel_value
+    friction = interp(
+      lateral_jerk_desired,
+      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
+      [-torque_params.friction, torque_params.friction]
+    )
+    return out + friction + g_lat_accel * 0.6
+  
+  @staticmethod
+  def torque_from_lateral_accel_bolt_euv(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel, lateral_jerk_desired):
+    ANGLE_COEF = 0.16179233
+    ANGLE_COEF2 = 0.20691964
+    SPEED_OFFSET = -7.94958973
+    SIGMOID_COEF_RIGHT = 0.34906506
+    SIGMOID_COEF_LEFT = 0.20000000
+    SPEED_COEF = 0.38748798
+
+    x = ANGLE_COEF * lateral_accel_value * (40.23 / (max(0.2,v_ego + SPEED_OFFSET))**SPEED_COEF)
+    sigmoid = erf(x)
+    out = ((SIGMOID_COEF_RIGHT if lateral_accel_value < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * lateral_accel_value
+    friction = interp(
+      lateral_jerk_desired,
+      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
+      [-torque_params.friction, torque_params.friction]
+    )
+    return out + friction + g_lat_accel * 0.6
+  
+  @staticmethod
+  def torque_from_lateral_accel_bolt(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel, lateral_jerk_desired):
+    ANGLE_COEF = 0.18708832
+    ANGLE_COEF2 = 0.28818528
+    SPEED_OFFSET = 20.00000000
+    SIGMOID_COEF_RIGHT = 0.36997215
+    SIGMOID_COEF_LEFT = 0.43181054
+    SPEED_COEF = 0.34143006
+    x = ANGLE_COEF * lateral_accel_value * (40.23 / (max(0.2,v_ego + SPEED_OFFSET))**SPEED_COEF)
     sigmoid = erf(x)
     out = ((SIGMOID_COEF_RIGHT if lateral_accel_value < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * lateral_accel_value
     friction = interp(
@@ -57,6 +94,10 @@ class CarInterface(CarInterfaceBase):
   def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
     if self.CP.carFingerprint == CAR.VOLT:
       return self.torque_from_lateral_accel_volt
+    elif self.CP.carFingerprint == CAR.BOLT_EV:
+      return self.torque_from_lateral_accel_bolt
+    elif self.CP.carFingerprint == CAR.BOLT_EUV:
+      return self.torque_from_lateral_accel_bolt_euv
     else:
       return CarInterfaceBase.torque_from_lateral_accel_linear
 
