@@ -39,7 +39,7 @@ class CarInterface(CarInterfaceBase):
   @staticmethod
   def torque_from_lateral_accel_volt(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel, lateral_jerk_desired):
     ANGLE_COEF = 0.08617848
-    ANGLE_COEF2 = 0.16
+    ANGLE_COEF2 = 0.12568428
     SPEED_OFFSET = -3.48009247
     SIGMOID_COEF_RIGHT = 0.56664089
     SIGMOID_COEF_LEFT = 0.50360594
@@ -138,7 +138,6 @@ class CarInterface(CarInterfaceBase):
       ret.centerToFront = ret.wheelbase * 0.45  # Volt Gen 1, TODO corner weigh
 
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
-      ret.lateralTuning.torque.kf = 1.0 # use with custom torque ff
       ret.steerActuatorDelay = 0.2
       
       ret.longitudinalTuning.kpBP = [5., 15., 35.]
