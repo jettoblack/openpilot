@@ -4,10 +4,11 @@ from math import fabs, erf
 from panda import Panda
 
 from common.conversions import Conversions as CV
+from common.numpy_fast import interp
 from common.realtime import sec_since_boot
 from selfdrive.car import STD_CARGO_KG, create_button_event, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
 from selfdrive.car.gm.values import CAR, CruiseButtons, CarControllerParams, EV_CAR, CAMERA_ACC_CAR
-from selfdrive.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType
+from selfdrive.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType, FRICTION_THRESHOLD
 
 ButtonType = car.CarState.ButtonEvent.Type
 EventName = car.CarEvent.EventName
@@ -36,7 +37,7 @@ class CarInterface(CarInterfaceBase):
       return CarInterfaceBase.get_steer_feedforward_default
     
   @staticmethod
-  def torque_from_lateral_accel_volt(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel):
+  def torque_from_lateral_accel_volt(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel, lateral_jerk_desired):
     ANGLE_COEF = 0.08617848
     ANGLE_COEF2 = 0.16
     SPEED_OFFSET = -3.48009247
@@ -46,7 +47,12 @@ class CarInterface(CarInterfaceBase):
     x = ANGLE_COEF * (lateral_accel_value) * (40.23 / (max(0.05,v_ego + SPEED_OFFSET))**SPEED_COEF)
     sigmoid = erf(x)
     out = ((SIGMOID_COEF_RIGHT if lateral_accel_value < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * lateral_accel_value
-    return out + g_lat_accel * 0.4
+    friction = interp(
+      lateral_jerk_desired,
+      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
+      [-torque_params.friction, torque_params.friction]
+    )
+    return out + friction + g_lat_accel * 0.6
   
   def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
     if self.CP.carFingerprint == CAR.VOLT:
