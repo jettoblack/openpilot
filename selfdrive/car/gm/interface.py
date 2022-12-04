@@ -98,6 +98,29 @@ class CarInterface(CarInterfaceBase):
     )
     return out + friction + g_lat_accel * 0.6
   
+  @staticmethod
+  def torque_from_lateral_accel_silverado(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel, lateral_jerk_desired):
+    ANGLE_COEF = 0.40612450
+    ANGLE_COEF2_RIGHT = 0.14742903
+    ANGLE_COEF2_LEFT = 0.07317035
+    SIGMOID_COEF_RIGHT = 0.35
+    SIGMOID_COEF_LEFT = 0.35
+    x = ANGLE_COEF * (lateral_accel_value) * (40.23 / (max(0.2,v_ego)))
+    sigmoid = erf(x)
+    if lateral_accel_value < 0.:
+      sigmoid_coef = SIGMOID_COEF_RIGHT 
+      slope_coef = ANGLE_COEF2_RIGHT
+    else:
+      sigmoid_coef = SIGMOID_COEF_LEFT
+      slope_coef = ANGLE_COEF2_LEFT
+    out = sigmoid_coef * sigmoid + slope_coef * lateral_accel_value
+    friction = interp(
+      lateral_jerk_desired,
+      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
+      [-torque_params.friction, torque_params.friction]
+    )
+    return out + friction + g_lat_accel * 0.6
+  
   def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
     if self.CP.carFingerprint == CAR.VOLT:
       return self.torque_from_lateral_accel_volt
@@ -267,10 +290,13 @@ class CarInterface(CarInterfaceBase):
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
     elif candidate == CAR.SILVERADO:
-      ret.mass = 2200. + STD_CARGO_KG
-      ret.wheelbase = 3.75
+      ret.minEnableSpeed = -1.
+      ret.minSteerSpeed = -1 * CV.MPH_TO_MS
+      ret.mass = 2400. + STD_CARGO_KG
+      ret.wheelbase = 3.745
       ret.steerRatio = 16.3
-      ret.centerToFront = ret.wheelbase * 0.5
+      ret.centerToFront = ret.wheelbase * .49
+      ret.steerActuatorDelay = 0.11
       tire_stiffness_factor = 1.0
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
