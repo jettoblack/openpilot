@@ -6,7 +6,7 @@ from selfdrive.controls.lib.pid import PIDController
 from selfdrive.modeld.constants import T_IDXS
 
 E2E_DEADZONE_BUFFER_BP = [0.0, 35.0]
-E2E_DEADZONE_BUFFER_V = [0.15, 0.05]
+E2E_DEADZONE_BUFFER_V = [0.2, 0.1]
 E2E_ERROR_FACTOR_BP = [0.0, 35.0]
 E2E_ERROR_FACTOR_V = [0.8, 1.0]
 
