@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from cereal import car
-from math import fabs, erf
+from math import fabs, erf, atan
 from panda import Panda
 
 from common.conversions import Conversions as CV
@@ -26,9 +26,16 @@ class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def get_steer_feedforward_acadia(desired_angle, v_ego):
-    desired_angle *= 0.09760208
-    sigmoid = desired_angle / (1 + fabs(desired_angle))
-    return 0.04689655 * sigmoid * (v_ego + 10.028217)
+    ANGLE_COEF = 5.00000000
+    ANGLE_COEF2 = 1.90844451
+    ANGLE_COEF3 = 0.03401073
+    SPEED_OFFSET = 13.72019138
+    SIGMOID_COEF_RIGHT = 0.00100000
+    SIGMOID_COEF_LEFT = 0.00101873
+    SPEED_COEF = 0.36844505
+    x = ANGLE_COEF * (desired_angle) / max(0.01,v_ego)
+    sigmoid = x / (1. + fabs(x))
+    return ((SIGMOID_COEF_RIGHT if desired_angle > 0. else SIGMOID_COEF_LEFT) * sigmoid) * (0.01 + v_ego + SPEED_OFFSET) ** ANGLE_COEF2 + ANGLE_COEF3 * (desired_angle * SPEED_COEF - atan(desired_angle * SPEED_COEF))
 
   def get_steer_feedforward_function(self):
     if self.CP.carFingerprint == CAR.ACADIA:
@@ -208,9 +215,23 @@ class CarInterface(CarInterfaceBase):
       ret.minEnableSpeed = -1.  # engage speed is decided by pcm
       ret.mass = 4353. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.86
-      ret.steerRatio = 14.4  # end to end is 13.46
+      ret.steerRatio = 16.0 #14.4  # end to end is 13.46
+      ret.steerRatioRear = 0.
       ret.centerToFront = ret.wheelbase * 0.4
-      ret.lateralTuning.pid.kf = 1.  # get_steer_feedforward_acadia()
+      ret.steerActuatorDelay = 0.24
+        
+      ret.lateralTuning.pid.kpBP = [i * CV.MPH_TO_MS for i in [0., 80.]]
+      ret.lateralTuning.pid.kpV = [0., 0.16]
+      ret.lateralTuning.pid.kiBP = [0., 35.]
+      ret.lateralTuning.pid.kiV = [0.008, 0.012]
+      ret.lateralTuning.pid.kdBP = [0.]
+      ret.lateralTuning.pid.kdV = [0.6]
+      ret.lateralTuning.pid.kf = 1. # get_steer_feedforward_acadia()
+
+      ret.longitudinalTuning.kdBP = [5., 25.]
+      ret.longitudinalTuning.kdV = [0.8, 0.4]
+      ret.longitudinalTuning.kiBP = [5., 35.]
+      ret.longitudinalTuning.kiV = [0.31, 0.34]
       ret.longitudinalActuatorDelayUpperBound = 0.5  # large delay to initially start braking
 
     elif candidate == CAR.BUICK_REGAL:
