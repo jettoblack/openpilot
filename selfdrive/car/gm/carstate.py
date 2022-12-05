@@ -95,15 +95,6 @@ class CarState(CarStateBase):
       ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(pt_cp.vl["ECMPRDNL2"]["PRNDL2"], None))
 
     ret.brake = pt_cp.vl["ECMAcceleratorPos"]["BrakePedalPos"]
-      
-    if self.CP.networkLocation == NetworkLocation.fwdCamera:
-      ret.brakePressed = pt_cp.vl["ECMEngineStatus"]["BrakePressed"] != 0
-    else:
-      # Some Volt 2016-17 have loose brake pedal push rod retainers which causes the ECM to believe
-      # that the brake is being intermittently pressed without user interaction.
-      # To avoid a cruise fault we need to use a conservative brake position threshold
-      # https://static.nhtsa.gov/odi/tsbs/2017/MC-10137629-9999.pdf
-      ret.brakePressed = (ret.brake >= 8 or self.regen_paddle_pressed)
 
     ret.gas = pt_cp.vl["AcceleratorPedal2"]["AcceleratorPedal2"] / 254.
     ret.gasPressed = ret.gas > 1e-5
@@ -131,6 +122,16 @@ class CarState(CarStateBase):
         self.one_pedal_mode_active = True
         self.one_pedal_mode_temporary = True
       self.regen_paddle_pressed = ret.regenBraking
+    
+      
+    if self.CP.networkLocation == NetworkLocation.fwdCamera:
+      ret.brakePressed = pt_cp.vl["ECMEngineStatus"]["BrakePressed"] != 0
+    else:
+      # Some Volt 2016-17 have loose brake pedal push rod retainers which causes the ECM to believe
+      # that the brake is being intermittently pressed without user interaction.
+      # To avoid a cruise fault we need to use a conservative brake position threshold
+      # https://static.nhtsa.gov/odi/tsbs/2017/MC-10137629-9999.pdf
+      ret.brakePressed = (ret.brake >= 8 or self.regen_paddle_pressed)
     
     ret.onePedalModeActive = self.one_pedal_mode_active
     ret.onePedalModeTemporary = self.one_pedal_mode_temporary
