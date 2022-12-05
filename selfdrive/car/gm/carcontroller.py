@@ -7,7 +7,7 @@ import math
 from opendbc.can.packer import CANPacker
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.gm import gmcan
-from selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons, AccState, EV_CAR
+from selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons, EV_CAR
 from selfdrive.controls.lib.drive_helpers import apply_deadzone
 from selfdrive.controls.lib.pid import PIDController
 from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
@@ -64,12 +64,10 @@ class CarController:
     self.one_pedal_pid = PIDController(k_p=(CP.longitudinalTuning.kpBP, CP.longitudinalTuning.kpV), 
                                       k_i=(CP.longitudinalTuning.kiBP, CP.longitudinalTuning.kiV), 
                                       k_d=(CP.longitudinalTuning.kdBP, CP.longitudinalTuning.kdV),
-                                      derivative_period=0.1,
+                                      derivative_period=0.1, neg_limit=-3.5, pos_limit=0.0,
                                       rate=1/(DT_CTRL * 4))
     self.one_pedal_decel = 0.0
     self.one_pedal_decel_in = 0.
-    self.one_pedal_pid.neg_limit = -3.5
-    self.one_pedal_pid.pos_limit = 0.0
     self.lead_accel_last_t = 0.
     self.one_pedal_mode_op_braking_allowed = True
 
@@ -170,6 +168,7 @@ class CarController:
           near_stop = (CS.out.vEgo < self.params.NEAR_STOP_BRAKE_PHASE) and car_stopping
           can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
           CS.autohold_activated = True
+          self.one_pedal_pid.reset()
         elif CS.one_pedal_mode_active and CS.out.cruiseState.available and CS.out.gearShifter in ['drive','low'] and not (CC.longActive or CS.out.gasPressed or CS.out.brakePressed):
           t = sec_since_boot()
           self.one_pedal_decel_in = interp(CS.out.vEgo, ONE_PEDAL_MODE_DECEL_BP, ONE_PEDAL_MODE_DECEL_V)
@@ -220,6 +219,7 @@ class CarController:
           can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, CC.enabled and CS.out.cruiseState.enabled, at_full_stop))
           can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
           CS.autohold_activated = False
+          self.one_pedal_pid.reset()
 
         # Send dashboard UI commands (ACC status)
         send_fcw = hud_alert == VisualAlert.fcw
