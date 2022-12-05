@@ -959,6 +959,8 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
   turnSpeedControlState @45 :SpeedLimitControlState;
   turnSign @46 :Int16;
 
+  leadAccelPlanned @54 :Float32;
+
   enum LongitudinalPlanSource {
     cruise @0;
     lead0 @1;

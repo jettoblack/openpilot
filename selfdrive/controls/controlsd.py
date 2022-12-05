@@ -616,6 +616,8 @@ class Controls:
 
     lat_plan = self.sm['lateralPlan']
     long_plan = self.sm['longitudinalPlan']
+    
+    self.CI.CS.lead_accel = long_plan.leadAccelPlanned
 
     CC = car.CarControl.new_message()
     CC.enabled = self.enabled

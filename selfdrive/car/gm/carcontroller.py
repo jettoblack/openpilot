@@ -2,13 +2,14 @@ from cereal import car
 from common.conversions import Conversions as CV
 from common.filter_simple import FirstOrderFilter
 from common.numpy_fast import clip, interp
-from common.realtime import DT_CTRL
+from common.realtime import DT_CTRL, sec_since_boot
 import math
 from opendbc.can.packer import CANPacker
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.gm import gmcan
 from selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons, AccState, EV_CAR
 from selfdrive.controls.lib.drive_helpers import apply_deadzone
+from selfdrive.controls.lib.pid import PIDController
 from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
@@ -23,6 +24,22 @@ BRAKE_PITCH_FACTOR_V = [0., 1.] # [unitless in [0,1]; don't touch]
 PITCH_DEADZONE = 0.01 # [radians] 0.01 ≈ 1% grade
 PITCH_MAX_DELTA = math.radians(10.0) * DT_CTRL * 4  # 10°/s, checked at 25Hz
 PITCH_MIN, PITCH_MAX = math.radians(-19), math.radians(19) # steepest roads in US are ~18°
+
+ONE_PEDAL_ACCEL_PITCH_FACTOR_BP = [4., 8.] # [m/s]
+ONE_PEDAL_ACCEL_PITCH_FACTOR_V = [0.4, 1.] # [unitless in [0-1]]
+ONE_PEDAL_ACCEL_PITCH_FACTOR_INCLINE_V = [0.2, 1.] # [unitless in [0-1]]
+
+ONE_PEDAL_MODE_DECEL_BP = [i * CV.MPH_TO_MS for i in [0.5, 6.]] # [mph to meters]
+ONE_PEDAL_MODE_DECEL_V = [-1.0, -1.1]
+ONE_PEDAL_MIN_SPEED = 2.1
+ONE_PEDAL_DECEL_RATE_LIMIT_UP = 0.8 * DT_CTRL * 4 # m/s^2 per second for increasing braking force
+ONE_PEDAL_DECEL_RATE_LIMIT_DOWN = 0.8 * DT_CTRL * 4 # m/s^2 per second for decreasing
+
+ONE_PEDAL_MAX_DECEL = -3.5
+ONE_PEDAL_SPEED_ERROR_FACTOR_BP = [1.5, 20.] # [m/s] 
+ONE_PEDAL_SPEED_ERROR_FACTOR_V = [0.4, 0.2] # factor of error for non-lead braking decel
+
+ONE_PEDAL_LEAD_ACCEL_RATE_LOCKOUT_T = 0.6 # [s]
 
 class CarController:
   def __init__(self, dbc_name, CP, VM):
@@ -42,6 +59,19 @@ class CarController:
 
     self.params = CarControllerParams(self.CP)
     self.pitch = FirstOrderFilter(0., 0.09 * 4, DT_CTRL * 4) # runs at 25 Hz
+    
+        # pid runs at 25Hz
+    self.one_pedal_pid = PIDController(k_p=(CP.longitudinalTuning.kpBP, CP.longitudinalTuning.kpV), 
+                                      k_i=(CP.longitudinalTuning.kiBP, CP.longitudinalTuning.kiV), 
+                                      k_d=(CP.longitudinalTuning.kdBP, CP.longitudinalTuning.kdV),
+                                      derivative_period=0.1,
+                                      rate=1/(DT_CTRL * 4))
+    self.one_pedal_decel = 0.0
+    self.one_pedal_decel_in = 0.
+    self.one_pedal_pid.neg_limit = -3.5
+    self.one_pedal_pid.pos_limit = 0.0
+    self.lead_accel_last_t = 0.
+    self.one_pedal_mode_op_braking_allowed = True
 
     self.packer_pt = CANPacker(DBC[self.CP.carFingerprint]['pt'])
     self.packer_obj = CANPacker(DBC[self.CP.carFingerprint]['radar'])
@@ -100,6 +130,17 @@ class CarController:
         self.pitch.update(pitch)
         accel_g = ACCELERATION_DUE_TO_GRAVITY * apply_deadzone(self.pitch.x, PITCH_DEADZONE) # driving uphill is positive pitch
         accel += accel_g
+        
+        
+        if self.CP.carFingerprint in EV_CAR:
+          if not CC.longActive:
+            one_pedal_speed = max(CS.out.vEgo, ONE_PEDAL_MIN_SPEED)
+          else:
+            one_pedal_speed = CS.out.vEgo
+          threshold_accel = self.params.update_ev_gas_brake_threshold(one_pedal_speed)
+        else:
+          threshold_accel = CS.out.aEgo
+        
         if not CC.longActive:
           # ASCM sends max regen when not enabled
           self.apply_gas = self.params.INACTIVE_REGEN
@@ -116,7 +157,7 @@ class CarController:
 
         idx = (self.frame // 4) % 4
 
-        if CS.out.cruiseState.available and not CC.longActive and CS.autoHold and CS.autoHoldActive and not CS.out.gasPressed and CS.out.gearShifter in ['drive','low'] and CS.out.vEgo < 0.02 and not CS.regenPaddlePressed:
+        if CS.out.cruiseState.available and not CC.longActive and CS.auto_hold and CS.autohold_active and not CS.out.gasPressed and CS.out.gearShifter in ['drive','low'] and CS.out.vEgo < 0.02 and not CS.regen_paddle_pressed:
           # Auto Hold State
           car_stopping = self.apply_gas < self.params.ZERO_GAS
           at_full_stop = CS.out.standstill and car_stopping
@@ -128,7 +169,38 @@ class CarController:
             friction_brake_bus = CanBus.POWERTRAIN
           near_stop = (CS.out.vEgo < self.params.NEAR_STOP_BRAKE_PHASE) and car_stopping
           can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
-          CS.autoHoldActivated = True
+          CS.autohold_activated = True
+        elif CS.one_pedal_mode_active and CS.out.cruiseState.available and CS.out.gearShifter in ['drive','low'] and not (CC.longActive or CS.out.gasPressed or CS.out.brakePressed):
+          t = sec_since_boot()
+          self.one_pedal_decel_in = interp(CS.out.vEgo, ONE_PEDAL_MODE_DECEL_BP, ONE_PEDAL_MODE_DECEL_V)
+          if self.one_pedal_mode_op_braking_allowed:
+            self.one_pedal_decel_in = min(self.one_pedal_decel_in, CS.lead_accel)
+            if CS.lead_accel <= self.one_pedal_decel_in:
+              self.lead_accel_last_t = t
+          
+          if not self.one_pedal_mode_op_braking_allowed or CS.lead_accel != self.one_pedal_decel_in:
+            error_factor = interp(CS.out.vEgo, ONE_PEDAL_SPEED_ERROR_FACTOR_BP, ONE_PEDAL_SPEED_ERROR_FACTOR_V)
+          else:
+            error_factor = 1.0
+          error = self.one_pedal_decel_in - min(0.0, CS.out.aEgo + accel_g)
+          error *= error_factor
+          one_pedal_decel = self.one_pedal_pid.update(error, speed=CS.out.vEgo, feedforward=self.one_pedal_decel_in)
+          if t - self.lead_accel_last_t > ONE_PEDAL_LEAD_ACCEL_RATE_LOCKOUT_T:
+            self.one_pedal_decel = clip(one_pedal_decel, self.one_pedal_decel - ONE_PEDAL_DECEL_RATE_LIMIT_UP, self.one_pedal_decel + ONE_PEDAL_DECEL_RATE_LIMIT_DOWN)
+          else:
+            self.one_pedal_decel = one_pedal_decel
+          self.one_pedal_decel = max(self.one_pedal_decel, ONE_PEDAL_MAX_DECEL)
+          one_pedal_apply_brake = interp(self.one_pedal_decel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)
+          self.apply_brake = int(round(one_pedal_apply_brake))
+          at_full_stop = CS.out.standstill
+          near_stop = CS.out.vEgo < self.params.NEAR_STOP_BRAKE_PHASE
+          friction_brake_bus = CanBus.CHASSIS
+          # GM Camera exceptions
+          if self.CP.networkLocation == NetworkLocation.fwdCamera:
+            at_full_stop = at_full_stop and actuators.longControlState == LongCtrlState.stopping
+            friction_brake_bus = CanBus.POWERTRAIN
+          can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
+          CS.autohold_activated = False
         else:  
           if CS.out.gasPressed:
             at_full_stop = False
@@ -147,7 +219,7 @@ class CarController:
           # GasRegenCmdActive needs to be 1 to avoid cruise faults. It describes the ACC state, not actuation
           can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, CC.enabled and CS.out.cruiseState.enabled, at_full_stop))
           can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
-          CS.autoHoldActivated = False
+          CS.autohold_activated = False
 
         # Send dashboard UI commands (ACC status)
         send_fcw = hud_alert == VisualAlert.fcw

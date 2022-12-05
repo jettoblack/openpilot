@@ -44,12 +44,17 @@ class CarState(CarStateBase):
     self.prev_acc_mads_combo = None
     self.prev_brake_pressed = False
     
-    self.autoHold = True
-    self.autoHoldActive = False
-    self.autoHoldActivated = False
-    self.lastAutoHoldTime = 0.0
-    self.sessionInitTime = sec_since_boot()
-    self.regenPaddlePressed = False
+    self.auto_hold = True
+    self.autohold_active = False
+    self.autohold_activated = False
+    self.last_autohold_time = 0.0
+    self.session_init_time = sec_since_boot()
+    self.regen_paddle_pressed = False
+    
+    self.lead_accel = 0.
+    self.one_pedal_mode_active = False
+    self.one_pedal_mode_regen_paddle_double_press_time = 0.7
+    self.regen_paddle_pressed_last_t = 0.
 
   def update(self, pt_cp, cam_cp, loopback_cp):
     ret = car.CarState.new_message()
@@ -90,7 +95,12 @@ class CarState(CarStateBase):
     # Regen braking is braking
     if self.CP.transmissionType == TransmissionType.direct:
       ret.regenBraking = pt_cp.vl["EBCMRegenPaddle"]["RegenPaddle"] != 0
-      self.regenPaddlePressed = ret.regenBraking
+      t = sec_since_boot()
+      if ret.regenBraking and not self.regen_paddle_pressed:
+        if t - self.regen_paddle_pressed_last_t <= self.one_pedal_mode_regen_paddle_double_press_time:
+          self.one_pedal_mode_active = not self.one_pedal_mode_active
+        self.regen_paddle_pressed_last_t = t
+      self.regen_paddle_pressed = ret.regenBraking
       
     if self.CP.networkLocation == NetworkLocation.fwdCamera:
       ret.brakePressed = pt_cp.vl["ECMEngineStatus"]["BrakePressed"] != 0
@@ -99,7 +109,7 @@ class CarState(CarStateBase):
       # that the brake is being intermittently pressed without user interaction.
       # To avoid a cruise fault we need to use a conservative brake position threshold
       # https://static.nhtsa.gov/odi/tsbs/2017/MC-10137629-9999.pdf
-      ret.brakePressed = (ret.brake >= 8 or self.regenPaddlePressed)
+      ret.brakePressed = (ret.brake >= 8 or self.regen_paddle_pressed)
 
     ret.gas = pt_cp.vl["AcceleratorPedal2"]["AcceleratorPedal2"] / 254.
     ret.gasPressed = ret.gas > 1e-5

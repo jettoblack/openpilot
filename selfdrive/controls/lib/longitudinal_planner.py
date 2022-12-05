@@ -29,6 +29,10 @@ A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 _A_TOTAL_MAX_V = [1.7, 3.2]
 _A_TOTAL_MAX_BP = [20., 40.]
 
+BRAKE_SOURCES = {'lead0',
+                 'lead1',
+                 'lead2',
+                 'e2e'}
 
 def get_max_accel(v_ego, CP):
   if CP.carName == "toyota":
@@ -79,6 +83,8 @@ class LongitudinalPlanner:
     self.speed_limit_controller = SpeedLimitController()
     self.turn_speed_controller = TurnSpeedController()
     self.events = Events()
+    
+    self.lead_accel = 0.
 
   def read_param(self):
     e2e = self.params.get_bool('ExperimentalMode') and self.CP.openpilotLongitudinalControl
@@ -158,6 +164,10 @@ class LongitudinalPlanner:
     self.a_desired_trajectory = np.interp(T_IDXS[:CONTROL_N], T_IDXS_MPC, self.mpc.a_solution)
     self.j_desired_trajectory = np.interp(T_IDXS[:CONTROL_N], T_IDXS_MPC[:-1], self.mpc.j_solution)
 
+    if self.mpc.source in BRAKE_SOURCES \
+        and self.a_desired_trajectory[5] < self.lead_accel and self.a_desired_trajectory[5] < 0.:
+      self.lead_accel = self.a_desired_trajectory[5]
+
     # TODO counter is only needed because radar is glitchy, remove once radar is gone
     self.fcw = self.mpc.crash_cnt > 2 and not sm['carState'].standstill
     if self.fcw:
@@ -184,6 +194,7 @@ class LongitudinalPlanner:
     longitudinalPlan.hasLead = sm['radarState'].leadOne.status
     longitudinalPlan.longitudinalPlanSource = self.mpc.source if self.mpc.source != 'cruise' else self.cruise_source
     longitudinalPlan.fcw = self.fcw
+    longitudinalPlan.leadAccelPlanned = float(self.lead_accel)
 
     longitudinalPlan.solverExecutionTime = self.mpc.solve_time
 
