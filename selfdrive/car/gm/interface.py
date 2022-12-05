@@ -61,7 +61,7 @@ class CarInterface(CarInterfaceBase):
       [-FRICTION_THRESHOLD_LAT_JERK, FRICTION_THRESHOLD_LAT_JERK],
       [-torque_params.friction, torque_params.friction]
     )
-    return out + friction + g_lat_accel * 0.5
+    return out + friction + g_lat_accel * 0.4
   
   @staticmethod
   def torque_from_lateral_accel_bolt_euv(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel, lateral_jerk_desired):
@@ -80,7 +80,7 @@ class CarInterface(CarInterfaceBase):
       [-FRICTION_THRESHOLD_LAT_JERK, FRICTION_THRESHOLD_LAT_JERK],
       [-torque_params.friction, torque_params.friction]
     )
-    return out + friction + g_lat_accel * 0.5
+    return out + friction + g_lat_accel * 0.4
   
   @staticmethod
   def torque_from_lateral_accel_bolt(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel, lateral_jerk_desired):
@@ -98,7 +98,7 @@ class CarInterface(CarInterfaceBase):
       [-FRICTION_THRESHOLD_LAT_JERK, FRICTION_THRESHOLD_LAT_JERK],
       [-torque_params.friction, torque_params.friction]
     )
-    return out + friction + g_lat_accel * 0.5
+    return out + friction + g_lat_accel * 0.4
   
   @staticmethod
   def torque_from_lateral_accel_silverado(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, friction_compensation, v_ego, g_lat_accel, lateral_jerk_desired):
@@ -121,7 +121,7 @@ class CarInterface(CarInterfaceBase):
       [-FRICTION_THRESHOLD_LAT_JERK, FRICTION_THRESHOLD_LAT_JERK],
       [-torque_params.friction, torque_params.friction]
     )
-    return out + friction + g_lat_accel * 0.6
+    return out + friction + g_lat_accel * 0.4
   
   def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
     if self.CP.carFingerprint == CAR.VOLT:
