@@ -64,7 +64,7 @@ class CarController:
     self.one_pedal_pid = PIDController(k_p=(CP.longitudinalTuning.kpBP, CP.longitudinalTuning.kpV), 
                                       k_i=(CP.longitudinalTuning.kiBP, CP.longitudinalTuning.kiV), 
                                       k_d=(CP.longitudinalTuning.kdBP, CP.longitudinalTuning.kdV),
-                                      derivative_period=0.1, neg_limit=-3.5, pos_limit=0.0,
+                                      derivative_period=0.1, neg_limit=ONE_PEDAL_MAX_DECEL, pos_limit=0.0,
                                       rate=1/(DT_CTRL * 4))
     self.one_pedal_decel = 0.0
     self.one_pedal_decel_in = 0.
