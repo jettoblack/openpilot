@@ -14,6 +14,7 @@ TransmissionType = car.CarParams.TransmissionType
 NetworkLocation = car.CarParams.NetworkLocation
 STANDSTILL_THRESHOLD = 10 * 0.0311 * CV.KPH_TO_MS
 
+REGEN_PADDLE_STOP_SPEED = 2.0 * CV.MPH_TO_MS
 
 class CarState(CarStateBase):
   def __init__(self, CP):
@@ -53,8 +54,10 @@ class CarState(CarStateBase):
     
     self.lead_accel = 0.
     self.one_pedal_mode_active = False
+    self.one_pedal_mode_temporary = False
     self.one_pedal_mode_regen_paddle_double_press_time = 0.7
     self.regen_paddle_pressed_last_t = 0.
+    self.v_ego_prev = 0.
 
   def update(self, pt_cp, cam_cp, loopback_cp):
     ret = car.CarState.new_message()
@@ -92,15 +95,6 @@ class CarState(CarStateBase):
       ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(pt_cp.vl["ECMPRDNL2"]["PRNDL2"], None))
 
     ret.brake = pt_cp.vl["ECMAcceleratorPos"]["BrakePedalPos"]
-    # Regen braking is braking
-    if self.CP.transmissionType == TransmissionType.direct:
-      ret.regenBraking = pt_cp.vl["EBCMRegenPaddle"]["RegenPaddle"] != 0
-      t = sec_since_boot()
-      if ret.regenBraking and not self.regen_paddle_pressed:
-        if t - self.regen_paddle_pressed_last_t <= self.one_pedal_mode_regen_paddle_double_press_time:
-          self.one_pedal_mode_active = not self.one_pedal_mode_active
-        self.regen_paddle_pressed_last_t = t
-      self.regen_paddle_pressed = ret.regenBraking
       
     if self.CP.networkLocation == NetworkLocation.fwdCamera:
       ret.brakePressed = pt_cp.vl["ECMEngineStatus"]["BrakePressed"] != 0
@@ -113,6 +107,25 @@ class CarState(CarStateBase):
 
     ret.gas = pt_cp.vl["AcceleratorPedal2"]["AcceleratorPedal2"] / 254.
     ret.gasPressed = ret.gas > 1e-5
+    
+    if ret.gasPressed and self.one_pedal_mode_active and self.one_pedal_mode_temporary:
+      self.one_pedal_mode_active = False
+      self.one_pedal_mode_temporary = False
+    
+    # Regen braking is braking
+    if self.CP.transmissionType == TransmissionType.direct:
+      ret.regenBraking = pt_cp.vl["EBCMRegenPaddle"]["RegenPaddle"] != 0
+      t = sec_since_boot()
+      if ret.regenBraking and not self.regen_paddle_pressed:
+        if t - self.regen_paddle_pressed_last_t <= self.one_pedal_mode_regen_paddle_double_press_time:
+          self.one_pedal_mode_active = not self.one_pedal_mode_active
+          self.one_pedal_mode_temporary = False
+        self.regen_paddle_pressed_last_t = t
+      elif not self.one_pedal_mode_active and ret.regenBraking and self.regen_paddle_pressed \
+          and ret.vEgo < REGEN_PADDLE_STOP_SPEED and self.v_ego_prev >= REGEN_PADDLE_STOP_SPEED:
+        self.one_pedal_mode_active = True
+        self.one_pedal_mode_temporary = True
+      self.regen_paddle_pressed = ret.regenBraking
 
     ret.steeringAngleDeg = pt_cp.vl["PSCMSteeringAngle"]["SteeringWheelAngle"]
     ret.steeringRateDeg = pt_cp.vl["PSCMSteeringAngle"]["SteeringWheelRate"]
@@ -214,6 +227,8 @@ class CarState(CarStateBase):
         ret.steerFaultTemporary = self.lkas_status == 2
         ret.steerFaultPermanent = self.lkas_status == 3
 
+    self.v_ego_prev = ret.vEgo
+    
     return ret
 
   @staticmethod
