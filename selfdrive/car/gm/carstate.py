@@ -131,6 +131,9 @@ class CarState(CarStateBase):
         self.one_pedal_mode_active = True
         self.one_pedal_mode_temporary = True
       self.regen_paddle_pressed = ret.regenBraking
+    
+    ret.onePedalModeActive = self.one_pedal_mode_active
+    ret.onePedalModeTemporary = self.one_pedal_mode_temporary
 
     ret.steeringAngleDeg = pt_cp.vl["PSCMSteeringAngle"]["SteeringWheelAngle"]
     ret.steeringRateDeg = pt_cp.vl["PSCMSteeringAngle"]["SteeringWheelRate"]
