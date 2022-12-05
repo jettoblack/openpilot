@@ -116,7 +116,10 @@ class CarState(CarStateBase):
     if self.CP.transmissionType == TransmissionType.direct:
       ret.regenBraking = pt_cp.vl["EBCMRegenPaddle"]["RegenPaddle"] != 0
       t = sec_since_boot()
-      if ret.regenBraking and not self.regen_paddle_pressed:
+      if ret.regenBraking and not self.regen_paddle_pressed and self.one_pedal_mode_active and self.one_pedal_mode_temporary:
+        self.one_pedal_mode_active = False
+        self.one_pedal_mode_temporary = False
+      elif ret.regenBraking and not self.regen_paddle_pressed:
         if t - self.regen_paddle_pressed_last_t <= self.one_pedal_mode_regen_paddle_double_press_time:
           self.one_pedal_mode_active = True
           self.one_pedal_mode_temporary = False
@@ -125,9 +128,6 @@ class CarState(CarStateBase):
           and ret.vEgo < REGEN_PADDLE_STOP_SPEED and self.v_ego_prev >= REGEN_PADDLE_STOP_SPEED:
         self.one_pedal_mode_active = True
         self.one_pedal_mode_temporary = True
-      elif ret.regenBraking and self.one_pedal_mode_active and self.one_pedal_mode_temporary:
-        self.one_pedal_mode_active = False
-        self.one_pedal_mode_temporary = False
       self.regen_paddle_pressed = ret.regenBraking
 
     ret.steeringAngleDeg = pt_cp.vl["PSCMSteeringAngle"]["SteeringWheelAngle"]
