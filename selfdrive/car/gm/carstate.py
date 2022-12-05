@@ -14,7 +14,7 @@ TransmissionType = car.CarParams.TransmissionType
 NetworkLocation = car.CarParams.NetworkLocation
 STANDSTILL_THRESHOLD = 10 * 0.0311 * CV.KPH_TO_MS
 
-REGEN_PADDLE_STOP_SPEED = 2.0 * CV.MPH_TO_MS
+REGEN_PADDLE_STOP_SPEED = 3.5 * CV.MPH_TO_MS
 
 class CarState(CarStateBase):
   def __init__(self, CP):
