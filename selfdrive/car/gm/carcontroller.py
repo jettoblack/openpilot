@@ -198,7 +198,7 @@ class CarController:
           if self.CP.networkLocation == NetworkLocation.fwdCamera:
             at_full_stop = at_full_stop and actuators.longControlState == LongCtrlState.stopping
             friction_brake_bus = CanBus.POWERTRAIN
-          can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
+          can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, True, near_stop, at_full_stop, self.CP))
           CS.autohold_activated = False
         else:  
           if CS.out.gasPressed:
