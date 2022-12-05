@@ -8,7 +8,7 @@ from common.numpy_fast import interp
 from common.realtime import sec_since_boot
 from selfdrive.car import STD_CARGO_KG, create_button_event, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
 from selfdrive.car.gm.values import CAR, CruiseButtons, CarControllerParams, EV_CAR, CAMERA_ACC_CAR
-from selfdrive.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType, FRICTION_THRESHOLD
+from selfdrive.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType
 
 ButtonType = car.CarState.ButtonEvent.Type
 EventName = car.CarEvent.EventName
@@ -18,6 +18,8 @@ NetworkLocation = car.CarParams.NetworkLocation
 BUTTONS_DICT = {CruiseButtons.RES_ACCEL: ButtonType.accelCruise, CruiseButtons.DECEL_SET: ButtonType.decelCruise,
                 CruiseButtons.MAIN: ButtonType.altButton3, CruiseButtons.CANCEL: ButtonType.cancel}
 
+
+FRICTION_THRESHOLD_LAT_JERK = 1.5
 
 class CarInterface(CarInterfaceBase):
   @staticmethod
@@ -56,7 +58,7 @@ class CarInterface(CarInterfaceBase):
     out = ((SIGMOID_COEF_RIGHT if lateral_accel_value < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * lateral_accel_value
     friction = interp(
       lateral_jerk_desired,
-      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
+      [-FRICTION_THRESHOLD_LAT_JERK, FRICTION_THRESHOLD_LAT_JERK],
       [-torque_params.friction, torque_params.friction]
     )
     return out + friction + g_lat_accel * 0.6
@@ -75,7 +77,7 @@ class CarInterface(CarInterfaceBase):
     out = ((SIGMOID_COEF_RIGHT if lateral_accel_value < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * lateral_accel_value
     friction = interp(
       lateral_jerk_desired,
-      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
+      [-FRICTION_THRESHOLD_LAT_JERK, FRICTION_THRESHOLD_LAT_JERK],
       [-torque_params.friction, torque_params.friction]
     )
     return out + friction + g_lat_accel * 0.6
@@ -93,7 +95,7 @@ class CarInterface(CarInterfaceBase):
     out = ((SIGMOID_COEF_RIGHT if lateral_accel_value < 0. else SIGMOID_COEF_LEFT) * sigmoid) + ANGLE_COEF2 * lateral_accel_value
     friction = interp(
       lateral_jerk_desired,
-      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
+      [-FRICTION_THRESHOLD_LAT_JERK, FRICTION_THRESHOLD_LAT_JERK],
       [-torque_params.friction, torque_params.friction]
     )
     return out + friction + g_lat_accel * 0.6
@@ -116,7 +118,7 @@ class CarInterface(CarInterfaceBase):
     out = sigmoid_coef * sigmoid + slope_coef * lateral_accel_value
     friction = interp(
       lateral_jerk_desired,
-      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
+      [-FRICTION_THRESHOLD_LAT_JERK, FRICTION_THRESHOLD_LAT_JERK],
       [-torque_params.friction, torque_params.friction]
     )
     return out + friction + g_lat_accel * 0.6
