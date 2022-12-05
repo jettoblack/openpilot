@@ -116,7 +116,9 @@ class CarState(CarStateBase):
     if self.CP.transmissionType == TransmissionType.direct:
       ret.regenBraking = pt_cp.vl["EBCMRegenPaddle"]["RegenPaddle"] != 0
       t = sec_since_boot()
-      if ret.regenBraking and not self.regen_paddle_pressed and self.one_pedal_mode_active and self.one_pedal_mode_temporary:
+      if ret.regenBraking and not self.regen_paddle_pressed \
+          and self.one_pedal_mode_active and self.one_pedal_mode_temporary \
+          and ret.vEgo < 0.1:
         self.one_pedal_mode_active = False
         self.one_pedal_mode_temporary = False
       elif ret.regenBraking and not self.regen_paddle_pressed:
