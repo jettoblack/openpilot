@@ -291,6 +291,7 @@ class CarInterface(CarInterfaceBase):
 
     elif candidate == CAR.SILVERADO:
       ret.minEnableSpeed = -1.
+      ret.stopAccel = -4.0
       ret.minSteerSpeed = -1 * CV.MPH_TO_MS
       ret.mass = 2400. + STD_CARGO_KG
       ret.wheelbase = 3.745
