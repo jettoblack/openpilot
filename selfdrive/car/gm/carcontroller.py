@@ -166,7 +166,7 @@ class CarController:
             friction_brake_bus = CanBus.POWERTRAIN
           near_stop = (CS.out.vEgo < self.params.NEAR_STOP_BRAKE_PHASE) and car_stopping
           can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
-          can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, CC.enabled and CS.out.cruiseState.enabled, at_full_stop))
+          can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, False, at_full_stop))
           CS.autohold_activated = True
           self.one_pedal_pid.reset()
         elif CS.one_pedal_mode_active and CS.out.cruiseState.available and CS.out.gearShifter in ['drive','low'] and not (CC.longActive or CS.out.gasPressed or CS.out.brakePressed):
@@ -198,7 +198,7 @@ class CarController:
           if self.CP.networkLocation == NetworkLocation.fwdCamera:
             friction_brake_bus = CanBus.POWERTRAIN
           can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
-          can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, CC.enabled and CS.out.cruiseState.enabled, at_full_stop))
+          can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, False, at_full_stop))
           CS.autohold_activated = False
         else:  
           if CS.out.gasPressed:
