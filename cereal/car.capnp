@@ -129,6 +129,8 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     e2eLongStop @128;
     e2eLongStart @129;
 
+    autoHoldActivated @130;
+
     radarCanErrorDEPRECATED @15;
     communityFeatureDisallowedDEPRECATED @62;
     radarCommIssueDEPRECATED @67;
