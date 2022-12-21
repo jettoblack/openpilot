@@ -51,7 +51,7 @@ class CarState(CarStateBase):
     self.e2e_long_hold_gap = False
     self.resumeAllowed = False
     
-    self.autoHold = True
+    self.autoHold = False
     self.autoHoldActive = False
     self.autoHoldActivated = False
     self.lastAutoHoldTime = 0.0
