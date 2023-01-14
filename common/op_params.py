@@ -394,6 +394,7 @@ class opParams:
     
     self.fork_params = {
       'camera_offset_m': Param(-0.04 if TICI else 0.06, float, 'Adjust your default lane position. This only shifts the perceived position of lanelines for laneline-based planning. You need to also change the path_offset_m below in order to adjust lateral position when using laneless. (Your camera offset to use in lane_planner.py)\n', live=True, min_val=-0.5, max_val=0.5, is_common=True, unit='meters'),
+      
       'path_offset_m': Param(-0.04 if TICI else 0.0, float, 'Adjust your default path position. This is like camera offset, but applies to lateral position when no lanelines are present or they are not being used.\n', live=True, min_val=-0.5, max_val=0.5, is_common=True, unit='meters'),
       
       'car_12v_pause_charging_v': Param(11.0, float, 'Lower voltage threshold for your car\'s 12v system, below which the device will shutdown (well, stop charging, but there\'s no battery in the C2 or C3, so it shuts down)\n', min_val=0, max_val=10000, is_common=True, unit='volts'),
