@@ -48,6 +48,7 @@ class CarInterface(CarInterfaceBase):
     if CarState is not None:
       self.cp_chassis = self.CS.get_chassis_can_parser(CP)
     self.mads_one_pedal_enabled = False
+    self.mads_one_pedal_temporary = False
     self.mads_lead_braking_enabled = False
     self.mads_cruise_main = False
     
@@ -560,24 +561,31 @@ class CarInterface(CarInterfaceBase):
         events.add(EventName.resumeRequired)
 
     if self.MADS_enabled:
-      lead_braking_enabled = self.CS.MADS_lead_braking_enabled
-      if lead_braking_enabled != self.mads_lead_braking_enabled:
-        if lead_braking_enabled:
+      if self.CS.MADS_lead_braking_enabled != self.mads_lead_braking_enabled:
+        if self.CS.MADS_lead_braking_enabled:
           events.add(EventName.madsLeadBrakingEnabled)
         else:
           events.add(EventName.madsLeadBrakingDisabled)
-      one_pedal_enabled = self.CS.one_pedal_mode_active
-      if one_pedal_enabled != self.mads_one_pedal_enabled:
-        if one_pedal_enabled:
-          events.add(EventName.madsOnePedalEnabled)
+      self.mads_lead_braking_enabled = self.CS.MADS_lead_braking_enabled
+      
+      if self.CS.one_pedal_mode_active != self.mads_one_pedal_enabled:
+        if self.CS.one_pedal_mode_active:
+          if self.CS.one_pedal_mode_temporary:
+            events.add(EventName.madsOnePedalTemporary)
+          else:
+            events.add(EventName.madsOnePedalEnabled)
         else:
-          events.add(EventName.madsOnePedalDisabled)
-      cruise_main = self.CS.cruiseMain
-      if cruise_main != self.mads_cruise_main:
-        if cruise_main:
+          if not self.mads_one_pedal_temporary:
+            events.add(EventName.madsOnePedalDisabled)
+      self.mads_one_pedal_enabled = self.CS.one_pedal_mode_active
+      self.mads_one_pedal_temporary = self.CS.one_pedal_mode_temporary
+      
+      if self.CS.cruiseMain != self.mads_cruise_main:
+        if self.CS.cruiseMain:
           events.add(EventName.madsEnabled)
         else:
           events.add(EventName.madsDisabled)
+      self.mads_cruise_main = self.CS.cruiseMain
 
     # handle button presses
     for b in ret.buttonEvents:
