@@ -299,7 +299,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 16.8
       ret.centerToFront = 2.15  # measured
       tire_stiffness_factor = 0.469  # Stock Michelin Energy Saver A/S, LiveParameters
-      ret.lateralTuning.pid.kf = 0.00004 * 0.8  # full torque for 20 deg at 80mph means 0.00007818594
+      ret.lateralTuning.pid.kf = 0.00001
       ret.steerActuatorDelay = 0.2
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
