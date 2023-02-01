@@ -296,10 +296,10 @@ class CarInterface(CarInterfaceBase):
     elif candidate == CAR.BOLT_EUV:
       ret.mass = 1669. + STD_CARGO_KG
       ret.wheelbase = 2.63779
-      ret.steerRatio = 16.8
+      ret.steerRatio = 17.6
       ret.centerToFront = 2.15  # measured
       tire_stiffness_factor = 0.469  # Stock Michelin Energy Saver A/S, LiveParameters
-      ret.lateralTuning.pid.kf = 0.00001
+      ret.lateralTuning.pid.kf = 0.00002
       ret.steerActuatorDelay = 0.2
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
