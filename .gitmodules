@@ -7,3 +7,6 @@
 [submodule "opendbc"]
 	path = opendbc
 	url = https://github.com/commaai/opendbc.git
+[submodule "rednose"]
+	path = rednose
+	url = https://github.com/commaai/rednose.git
