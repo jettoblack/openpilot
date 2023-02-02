@@ -10,3 +10,6 @@
 [submodule "rednose"]
 	path = rednose
 	url = https://github.com/commaai/rednose.git
+[submodule "laika"]
+	path = laika
+	url = https://github.com/commaai/laika.git
