@@ -1,3 +1,6 @@
 [submodule "panda"]
 	path = panda
 	url = https://github.com/commaai/panda.git
+[submodule "cereal"]
+	path = cereal
+	url = https://github.com/commaai/cereal.git
