@@ -597,10 +597,18 @@ EVENTS: Dict[int, Dict[str, Union[Alert, AlertCallbackType]]] = {
       Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
   },
 
-  EventName.steerSaturated: {
+  EventName.steerSaturatedTorque: {
     ET.WARNING: Alert(
       "Take Control",
-      "Turn Exceeds Steering Limit",
+      "Turn Exceeds Torque Limit",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 1.),
+  },
+
+  EventName.steerSaturatedAngle: {
+    ET.WARNING: Alert(
+      "Take Control",
+      "Turn Exceeds Angle Limit",
       AlertStatus.userPrompt, AlertSize.mid,
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 1.),
   },
