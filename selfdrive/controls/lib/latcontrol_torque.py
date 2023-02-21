@@ -19,7 +19,10 @@ from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
 # move it at all, this is compensated for too.
 
 LOW_SPEED_X = [0, 10, 20, 30]
-LOW_SPEED_Y = [15, 13, 10, 5]
+LOW_SPEED_Y = [225, 169, 100, 25]
+
+def sign(x):
+  return 1.0 if x > 0.0 else -1.0
 
 
 class LatControlTorque(LatControl):
@@ -37,7 +40,22 @@ class LatControlTorque(LatControl):
     self.torque_params.latAccelOffset = latAccelOffset
     self.torque_params.friction = friction
 
-  def update(self, active, CS, VM, params, last_actuators, steer_limited, desired_curvature, desired_curvature_rate, llk):
+  def live_tune(self):
+    self.frame += 1
+    if self.frame % 300 == 0:
+      self._torque_max_lat_accel = float(self.params.get("TorqueMaxLatAccel", encoding="utf8") * 0.01)
+      self._torque_friction = float(self.params.get("TorqueFriction", encoding="utf8") * 0.01)
+      self.torque_params.latAccelFactor = self._torque_max_lat_accel
+      self.torque_params.friction = self._torque_friction
+      self.frame = 0
+
+  def update(self, active, CS, VM, params, last_actuators, steer_limited, desired_curvature, desired_curvature_rate, llk, mean_curvature=0.0):
+    self.custom_torque_timer += 1
+    if self.custom_torque_timer > 100:
+      self.custom_torque_timer = 0
+      self.custom_torque = self.params.get_bool("CustomTorqueLateral")
+    if self.custom_torque:
+      self.live_tune()
     pid_log = log.ControlsState.LateralTorqueState.new_message()
 
     if not active:
@@ -60,9 +78,9 @@ class LatControlTorque(LatControl):
       actual_lateral_accel = actual_curvature * CS.vEgo ** 2
       lateral_accel_deadzone = curvature_deadzone * CS.vEgo ** 2
 
-      low_speed_factor = interp(CS.vEgo, LOW_SPEED_X, LOW_SPEED_Y)**2
-      setpoint = desired_lateral_accel + low_speed_factor * desired_curvature
-      measurement = actual_lateral_accel + low_speed_factor * actual_curvature
+      low_speed_factor = interp(CS.vEgo, LOW_SPEED_X, LOW_SPEED_Y)
+      setpoint = desired_lateral_accel + low_speed_factor * min(abs(desired_curvature), abs(mean_curvature)) * sign(desired_curvature)
+      measurement = actual_lateral_accel + low_speed_factor * min(abs(actual_curvature), abs(mean_curvature)) * sign(actual_curvature)
       error = setpoint - measurement
       gravity_lateral_accel = -params.roll * ACCELERATION_DUE_TO_GRAVITY
       pid_log.error = CarInterfaceBase.torque_from_lateral_accel_linear(error, self.torque_params, error,
