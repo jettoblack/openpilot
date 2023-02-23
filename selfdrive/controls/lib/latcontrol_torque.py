@@ -34,8 +34,6 @@ class LatControlTorque(LatControl):
     self.torque_from_lateral_accel = CI.torque_from_lateral_accel()
     self.use_steering_angle = self.torque_params.useSteeringAngle
     self.steering_angle_deadzone_deg = self.torque_params.steeringAngleDeadzoneDeg
-    self.custom_torque_timer = 0
-    self.custom_torque = False
 
   def update_live_torque_params(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor
@@ -52,12 +50,6 @@ class LatControlTorque(LatControl):
       self.frame = 0
 
   def update(self, active, CS, VM, params, last_actuators, steer_limited, desired_curvature, desired_curvature_rate, llk, mean_curvature=0.0):
-    self.custom_torque_timer += 1
-    if self.custom_torque_timer > 100:
-      self.custom_torque_timer = 0
-      self.custom_torque = self.params.get_bool("CustomTorqueLateral")
-    if self.custom_torque:
-      self.live_tune()
     pid_log = log.ControlsState.LateralTorqueState.new_message()
 
     if not active:
