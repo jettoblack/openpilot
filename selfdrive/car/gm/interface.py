@@ -121,51 +121,12 @@ class CarInterface(CarInterfaceBase):
       [-torque_params.friction, torque_params.friction]
     )
     return out + friction + g_lat_accel * 0.8
-  
-  def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
-    if self.CP.carFingerprint == CAR.VOLT:
-      return self.torque_from_lateral_accel_volt
-    # elif self.CP.carFingerprint == CAR.BOLT_EV:
-    #   return self.torque_from_lateral_accel_bolt
-    elif self.CP.carFingerprint == CAR.BOLT_EUV:
-      return self.torque_from_lateral_accel_bolt_euv
-    else:
-      return CarInterfaceBase.torque_from_lateral_accel_linear
-
-  @staticmethod
-  def torque_from_lateral_accel_bolt(lateral_accel_value, torque_params, lateral_accel_error, lateral_accel_deadzone, vego, friction_compensation):
-    friction_interp = interp(
-      apply_center_deadzone(lateral_accel_error, lateral_accel_deadzone),
-      [-FRICTION_THRESHOLD, FRICTION_THRESHOLD],
-      [-torque_params.friction, torque_params.friction]
-    )
-    friction = friction_interp if friction_compensation else 0.0
-    steer_torque = lateral_accel_value / torque_params.latAccelFactor
-
-    # TODO:
-    # 1. Learn the correction factors from data
-    # 2. Generalize the logic to other GM torque control platforms
-    steer_break_pts = [-1.0, -0.9, -0.75, -0.5, 0.0, 0.5, 0.75, 0.9, 1.0]
-    steer_lataccel_factors = [1.5, 1.15, 1.02, 1.0, 1.0, 1.0, 1.02, 1.15, 1.5]
-    steer_correction_factor = interp(
-      steer_torque,
-      steer_break_pts,
-      steer_lataccel_factors
-    )
-
-    vego_break_pts = [0.0, 10.0, 15.0, 20.0, 100.0]
-    vego_lataccel_factors = [1.5, 1.5, 1.25, 1.0, 1.0]
-    vego_correction_factor = interp(
-      vego,
-      vego_break_pts,
-      vego_lataccel_factors,
-    )
-
-    return (steer_torque + friction) / (steer_correction_factor * vego_correction_factor)
 
   def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
     if self.CP.carFingerprint == CAR.BOLT_EUV:
-      return self.torque_from_lateral_accel_bolt
+      return self.torque_from_lateral_accel_bolt_euv
+    elif self.CP.carFingerprint == CAR.VOLT:
+      return self.torque_from_lateral_accel_volt
     else:
       return self.torque_from_lateral_accel_linear
 
