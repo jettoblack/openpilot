@@ -196,6 +196,7 @@ class Controls:
     self.desired_curvature_rate_debug = 0.0
     self.experimental_mode = False
     self.v_cruise_helper = VCruiseHelper(self.CP)
+    self.steerSaturationTimer = 0.0
 
     self.reverse_acc_change = False
 
@@ -709,7 +710,12 @@ class Controls:
         good_speed = CS.vEgo > 5
         max_torque = abs(self.last_actuators.steer) > 0.99
         if undershooting and turning and good_speed and max_torque:
-          lac_log.active and self.events.add(EventName.steerSaturated)
+          # warn after saturated for > 0.4s
+          self.steerSaturationTimer += DT_CTRL
+          if self.steerSaturationTimer > 0.4:
+            self.events.add(EventName.steerSaturated)
+        else:
+          self.steerSaturationTimer = 0.0
       elif lac_log.saturated:
         dpath_points = lat_plan.dPathPoints
         if len(dpath_points):
@@ -725,6 +731,8 @@ class Controls:
 
           if left_deviation or right_deviation:
             self.events.add(EventName.steerSaturated)
+    else:
+      self.steerSaturationTimer = 0.0
 
     # Ensure no NaNs/Infs
     for p in ACTUATOR_FIELDS:
